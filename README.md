@@ -14,9 +14,9 @@ We will release our code soon.
 ```
 python test.py
 ```
-Here is test weight for H3D to PL3D&ISPRS.[Google Drive](https://drive.google.com/file/d/1zcBZ_ReL8n58WCqEtA8yBOL9NtgjcZ91/view?usp=sharing)
+Here is test weight for H3D to PL3D&ISPRS. ([Google Drive](https://drive.google.com/file/d/1zcBZ_ReL8n58WCqEtA8yBOL9NtgjcZ91/view?usp=sharing))
 
-Here is test weight for STPLS3D to T3D&DALES.[Google Drive](https://drive.google.com/file/d/1XYGgSbtVjfO5BBDjCHY-v_Rp_2snQUl0/view?usp=sharing)
+Here is test weight for STPLS3D to T3D&DALES. ([Google Drive](https://drive.google.com/file/d/1XYGgSbtVjfO5BBDjCHY-v_Rp_2snQUl0/view?usp=sharing))
 
 # Cite
 Please cite our work if you find it useful.
