@@ -1,0 +1,450 @@
+2025-12-04 00:49:18 - INFO - {
+  "file": {
+    "folder_train": "/root/autodl-tmp/sim2real/STPLS3D/train_S50(0)-50(0)",
+    "folder_test": "/root/autodl-tmp/sim2real/STPLS3D/test_S50(0)-50(0)",
+    "result_folder": "/root/autodl-tmp/result_temp/Prototype"
+  },
+  "env": {
+    "seed": 2024,
+    "num_workers": 10
+  },
+  "dataset": {
+    "center_type": -1,
+    "voxel_size": 0.3,
+    "aug_parameter": "DGLSS",
+    "label_to_names": {
+      "-1": "undefined",
+      "0": "Ground",
+      "1": "Building",
+      "2": "Tree",
+      "3": "Car",
+      "4": "Light pole",
+      "5": "Fence"
+    },
+    "ignore_label": [
+      -1
+    ]
+  },
+  "model": {
+    "train_epoch": 100,
+    "train_batch_size": 4,
+    "val_batch_size": 2,
+    "test_batch_size": 2,
+    "test_interval": 10,
+    "learning_rate": 0.001,
+    "input_features_dim": 3,
+    "output_class_dim": 6
+  }
+}
+2025-12-04 00:49:18 - INFO - 随机种子设置为2024，初始化数据集...
+2025-12-04 00:49:18 - INFO - 模型加载...
+MinkUNet34(
+  (conv0p1s1): MinkowskiConvolution(in=3, out=32, kernel_size=[5, 5, 5], stride=[1, 1, 1], dilation=[1, 1, 1])
+  (bn0): MinkowskiBatchNorm(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (conv1p1s2): MinkowskiConvolution(in=32, out=32, kernel_size=[2, 2, 2], stride=[2, 2, 2], dilation=[1, 1, 1])
+  (bn1): MinkowskiBatchNorm(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (block1): Sequential(
+    (0): BasicBlock(
+      (conv1): MinkowskiConvolution(in=32, out=32, kernel_size=[3, 3, 3], stride=[1, 1, 1], dilation=[1, 1, 1])
+      (norm1): MinkowskiBatchNorm(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (conv2): MinkowskiConvolution(in=32, out=32, kernel_size=[3, 3, 3], stride=[1, 1, 1], dilation=[1, 1, 1])
+      (norm2): MinkowskiBatchNorm(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (relu): MinkowskiReLU()
+    )
+    (1): BasicBlock(
+      (conv1): MinkowskiConvolution(in=32, out=32, kernel_size=[3, 3, 3], stride=[1, 1, 1], dilation=[1, 1, 1])
+      (norm1): MinkowskiBatchNorm(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (conv2): MinkowskiConvolution(in=32, out=32, kernel_size=[3, 3, 3], stride=[1, 1, 1], dilation=[1, 1, 1])
+      (norm2): MinkowskiBatchNorm(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (relu): MinkowskiReLU()
+    )
+  )
+  (conv2p2s2): MinkowskiConvolution(in=32, out=32, kernel_size=[2, 2, 2], stride=[2, 2, 2], dilation=[1, 1, 1])
+  (bn2): MinkowskiBatchNorm(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (block2): Sequential(
+    (0): BasicBlock(
+      (conv1): MinkowskiConvolution(in=32, out=64, kernel_size=[3, 3, 3], stride=[1, 1, 1], dilation=[1, 1, 1])
+      (norm1): MinkowskiBatchNorm(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (conv2): MinkowskiConvolution(in=64, out=64, kernel_size=[3, 3, 3], stride=[1, 1, 1], dilation=[1, 1, 1])
+      (norm2): MinkowskiBatchNorm(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (relu): MinkowskiReLU()
+      (downsample): Sequential(
+        (0): MinkowskiConvolution(in=32, out=64, kernel_size=[1, 1, 1], stride=[1, 1, 1], dilation=[1, 1, 1])
+        (1): MinkowskiBatchNorm(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      )
+    )
+    (1): BasicBlock(
+      (conv1): MinkowskiConvolution(in=64, out=64, kernel_size=[3, 3, 3], stride=[1, 1, 1], dilation=[1, 1, 1])
+      (norm1): MinkowskiBatchNorm(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (conv2): MinkowskiConvolution(in=64, out=64, kernel_size=[3, 3, 3], stride=[1, 1, 1], dilation=[1, 1, 1])
+      (norm2): MinkowskiBatchNorm(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (relu): MinkowskiReLU()
+    )
+    (2): BasicBlock(
+      (conv1): MinkowskiConvolution(in=64, out=64, kernel_size=[3, 3, 3], stride=[1, 1, 1], dilation=[1, 1, 1])
+      (norm1): MinkowskiBatchNorm(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (conv2): MinkowskiConvolution(in=64, out=64, kernel_size=[3, 3, 3], stride=[1, 1, 1], dilation=[1, 1, 1])
+      (norm2): MinkowskiBatchNorm(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (relu): MinkowskiReLU()
+    )
+  )
+  (conv3p4s2): MinkowskiConvolution(in=64, out=64, kernel_size=[2, 2, 2], stride=[2, 2, 2], dilation=[1, 1, 1])
+  (bn3): MinkowskiBatchNorm(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (block3): Sequential(
+    (0): BasicBlock(
+      (conv1): MinkowskiConvolution(in=64, out=128, kernel_size=[3, 3, 3], stride=[1, 1, 1], dilation=[1, 1, 1])
+      (norm1): MinkowskiBatchNorm(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (conv2): MinkowskiConvolution(in=128, out=128, kernel_size=[3, 3, 3], stride=[1, 1, 1], dilation=[1, 1, 1])
+      (norm2): MinkowskiBatchNorm(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (relu): MinkowskiReLU()
+      (downsample): Sequential(
+        (0): MinkowskiConvolution(in=64, out=128, kernel_size=[1, 1, 1], stride=[1, 1, 1], dilation=[1, 1, 1])
+        (1): MinkowskiBatchNorm(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      )
+    )
+    (1): BasicBlock(
+      (conv1): MinkowskiConvolution(in=128, out=128, kernel_size=[3, 3, 3], stride=[1, 1, 1], dilation=[1, 1, 1])
+      (norm1): MinkowskiBatchNorm(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (conv2): MinkowskiConvolution(in=128, out=128, kernel_size=[3, 3, 3], stride=[1, 1, 1], dilation=[1, 1, 1])
+      (norm2): MinkowskiBatchNorm(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (relu): MinkowskiReLU()
+    )
+    (2): BasicBlock(
+      (conv1): MinkowskiConvolution(in=128, out=128, kernel_size=[3, 3, 3], stride=[1, 1, 1], dilation=[1, 1, 1])
+      (norm1): MinkowskiBatchNorm(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (conv2): MinkowskiConvolution(in=128, out=128, kernel_size=[3, 3, 3], stride=[1, 1, 1], dilation=[1, 1, 1])
+      (norm2): MinkowskiBatchNorm(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (relu): MinkowskiReLU()
+    )
+    (3): BasicBlock(
+      (conv1): MinkowskiConvolution(in=128, out=128, kernel_size=[3, 3, 3], stride=[1, 1, 1], dilation=[1, 1, 1])
+      (norm1): MinkowskiBatchNorm(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (conv2): MinkowskiConvolution(in=128, out=128, kernel_size=[3, 3, 3], stride=[1, 1, 1], dilation=[1, 1, 1])
+      (norm2): MinkowskiBatchNorm(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (relu): MinkowskiReLU()
+    )
+  )
+  (conv4p8s2): MinkowskiConvolution(in=128, out=128, kernel_size=[2, 2, 2], stride=[2, 2, 2], dilation=[1, 1, 1])
+  (bn4): MinkowskiBatchNorm(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (block4): Sequential(
+    (0): BasicBlock(
+      (conv1): MinkowskiConvolution(in=128, out=256, kernel_size=[3, 3, 3], stride=[1, 1, 1], dilation=[1, 1, 1])
+      (norm1): MinkowskiBatchNorm(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (conv2): MinkowskiConvolution(in=256, out=256, kernel_size=[3, 3, 3], stride=[1, 1, 1], dilation=[1, 1, 1])
+      (norm2): MinkowskiBatchNorm(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (relu): MinkowskiReLU()
+      (downsample): Sequential(
+        (0): MinkowskiConvolution(in=128, out=256, kernel_size=[1, 1, 1], stride=[1, 1, 1], dilation=[1, 1, 1])
+        (1): MinkowskiBatchNorm(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      )
+    )
+    (1): BasicBlock(
+      (conv1): MinkowskiConvolution(in=256, out=256, kernel_size=[3, 3, 3], stride=[1, 1, 1], dilation=[1, 1, 1])
+      (norm1): MinkowskiBatchNorm(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (conv2): MinkowskiConvolution(in=256, out=256, kernel_size=[3, 3, 3], stride=[1, 1, 1], dilation=[1, 1, 1])
+      (norm2): MinkowskiBatchNorm(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (relu): MinkowskiReLU()
+    )
+    (2): BasicBlock(
+      (conv1): MinkowskiConvolution(in=256, out=256, kernel_size=[3, 3, 3], stride=[1, 1, 1], dilation=[1, 1, 1])
+      (norm1): MinkowskiBatchNorm(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (conv2): MinkowskiConvolution(in=256, out=256, kernel_size=[3, 3, 3], stride=[1, 1, 1], dilation=[1, 1, 1])
+      (norm2): MinkowskiBatchNorm(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (relu): MinkowskiReLU()
+    )
+    (3): BasicBlock(
+      (conv1): MinkowskiConvolution(in=256, out=256, kernel_size=[3, 3, 3], stride=[1, 1, 1], dilation=[1, 1, 1])
+      (norm1): MinkowskiBatchNorm(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (conv2): MinkowskiConvolution(in=256, out=256, kernel_size=[3, 3, 3], stride=[1, 1, 1], dilation=[1, 1, 1])
+      (norm2): MinkowskiBatchNorm(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (relu): MinkowskiReLU()
+    )
+    (4): BasicBlock(
+      (conv1): MinkowskiConvolution(in=256, out=256, kernel_size=[3, 3, 3], stride=[1, 1, 1], dilation=[1, 1, 1])
+      (norm1): MinkowskiBatchNorm(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (conv2): MinkowskiConvolution(in=256, out=256, kernel_size=[3, 3, 3], stride=[1, 1, 1], dilation=[1, 1, 1])
+      (norm2): MinkowskiBatchNorm(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (relu): MinkowskiReLU()
+    )
+    (5): BasicBlock(
+      (conv1): MinkowskiConvolution(in=256, out=256, kernel_size=[3, 3, 3], stride=[1, 1, 1], dilation=[1, 1, 1])
+      (norm1): MinkowskiBatchNorm(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (conv2): MinkowskiConvolution(in=256, out=256, kernel_size=[3, 3, 3], stride=[1, 1, 1], dilation=[1, 1, 1])
+      (norm2): MinkowskiBatchNorm(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (relu): MinkowskiReLU()
+    )
+  )
+  (convtr4p16s2): MinkowskiConvolutionTranspose(in=256, out=256, kernel_size=[2, 2, 2], stride=[2, 2, 2], dilation=[1, 1, 1])
+  (bntr4): MinkowskiBatchNorm(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (block5): Sequential(
+    (0): BasicBlock(
+      (conv1): MinkowskiConvolution(in=384, out=256, kernel_size=[3, 3, 3], stride=[1, 1, 1], dilation=[1, 1, 1])
+      (norm1): MinkowskiBatchNorm(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (conv2): MinkowskiConvolution(in=256, out=256, kernel_size=[3, 3, 3], stride=[1, 1, 1], dilation=[1, 1, 1])
+      (norm2): MinkowskiBatchNorm(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (relu): MinkowskiReLU()
+      (downsample): Sequential(
+        (0): MinkowskiConvolution(in=384, out=256, kernel_size=[1, 1, 1], stride=[1, 1, 1], dilation=[1, 1, 1])
+        (1): MinkowskiBatchNorm(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      )
+    )
+    (1): BasicBlock(
+      (conv1): MinkowskiConvolution(in=256, out=256, kernel_size=[3, 3, 3], stride=[1, 1, 1], dilation=[1, 1, 1])
+      (norm1): MinkowskiBatchNorm(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (conv2): MinkowskiConvolution(in=256, out=256, kernel_size=[3, 3, 3], stride=[1, 1, 1], dilation=[1, 1, 1])
+      (norm2): MinkowskiBatchNorm(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (relu): MinkowskiReLU()
+    )
+  )
+  (convtr5p8s2): MinkowskiConvolutionTranspose(in=256, out=128, kernel_size=[2, 2, 2], stride=[2, 2, 2], dilation=[1, 1, 1])
+  (bntr5): MinkowskiBatchNorm(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (block6): Sequential(
+    (0): BasicBlock(
+      (conv1): MinkowskiConvolution(in=192, out=128, kernel_size=[3, 3, 3], stride=[1, 1, 1], dilation=[1, 1, 1])
+      (norm1): MinkowskiBatchNorm(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (conv2): MinkowskiConvolution(in=128, out=128, kernel_size=[3, 3, 3], stride=[1, 1, 1], dilation=[1, 1, 1])
+      (norm2): MinkowskiBatchNorm(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (relu): MinkowskiReLU()
+      (downsample): Sequential(
+        (0): MinkowskiConvolution(in=192, out=128, kernel_size=[1, 1, 1], stride=[1, 1, 1], dilation=[1, 1, 1])
+        (1): MinkowskiBatchNorm(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      )
+    )
+    (1): BasicBlock(
+      (conv1): MinkowskiConvolution(in=128, out=128, kernel_size=[3, 3, 3], stride=[1, 1, 1], dilation=[1, 1, 1])
+      (norm1): MinkowskiBatchNorm(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (conv2): MinkowskiConvolution(in=128, out=128, kernel_size=[3, 3, 3], stride=[1, 1, 1], dilation=[1, 1, 1])
+      (norm2): MinkowskiBatchNorm(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (relu): MinkowskiReLU()
+    )
+  )
+  (convtr6p4s2): MinkowskiConvolutionTranspose(in=128, out=96, kernel_size=[2, 2, 2], stride=[2, 2, 2], dilation=[1, 1, 1])
+  (bntr6): MinkowskiBatchNorm(96, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (block7): Sequential(
+    (0): BasicBlock(
+      (conv1): MinkowskiConvolution(in=128, out=96, kernel_size=[3, 3, 3], stride=[1, 1, 1], dilation=[1, 1, 1])
+      (norm1): MinkowskiBatchNorm(96, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (conv2): MinkowskiConvolution(in=96, out=96, kernel_size=[3, 3, 3], stride=[1, 1, 1], dilation=[1, 1, 1])
+      (norm2): MinkowskiBatchNorm(96, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (relu): MinkowskiReLU()
+      (downsample): Sequential(
+        (0): MinkowskiConvolution(in=128, out=96, kernel_size=[1, 1, 1], stride=[1, 1, 1], dilation=[1, 1, 1])
+        (1): MinkowskiBatchNorm(96, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      )
+    )
+    (1): BasicBlock(
+      (conv1): MinkowskiConvolution(in=96, out=96, kernel_size=[3, 3, 3], stride=[1, 1, 1], dilation=[1, 1, 1])
+      (norm1): MinkowskiBatchNorm(96, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (conv2): MinkowskiConvolution(in=96, out=96, kernel_size=[3, 3, 3], stride=[1, 1, 1], dilation=[1, 1, 1])
+      (norm2): MinkowskiBatchNorm(96, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (relu): MinkowskiReLU()
+    )
+  )
+  (convtr7p2s2): MinkowskiConvolutionTranspose(in=96, out=96, kernel_size=[2, 2, 2], stride=[2, 2, 2], dilation=[1, 1, 1])
+  (bntr7): MinkowskiBatchNorm(96, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (block8): Sequential(
+    (0): BasicBlock(
+      (conv1): MinkowskiConvolution(in=128, out=96, kernel_size=[3, 3, 3], stride=[1, 1, 1], dilation=[1, 1, 1])
+      (norm1): MinkowskiBatchNorm(96, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (conv2): MinkowskiConvolution(in=96, out=96, kernel_size=[3, 3, 3], stride=[1, 1, 1], dilation=[1, 1, 1])
+      (norm2): MinkowskiBatchNorm(96, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (relu): MinkowskiReLU()
+      (downsample): Sequential(
+        (0): MinkowskiConvolution(in=128, out=96, kernel_size=[1, 1, 1], stride=[1, 1, 1], dilation=[1, 1, 1])
+        (1): MinkowskiBatchNorm(96, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      )
+    )
+    (1): BasicBlock(
+      (conv1): MinkowskiConvolution(in=96, out=96, kernel_size=[3, 3, 3], stride=[1, 1, 1], dilation=[1, 1, 1])
+      (norm1): MinkowskiBatchNorm(96, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (conv2): MinkowskiConvolution(in=96, out=96, kernel_size=[3, 3, 3], stride=[1, 1, 1], dilation=[1, 1, 1])
+      (norm2): MinkowskiBatchNorm(96, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (relu): MinkowskiReLU()
+    )
+  )
+  (final): MinkowskiConvolution(in=96, out=6, kernel_size=[1, 1, 1], stride=[1, 1, 1], dilation=[1, 1, 1])
+  (relu): MinkowskiReLU()
+  (dropout): MinkowskiDropout()
+)
+
+2025-12-04 00:49:18 - INFO - 优化器加载...
+Adam (
+Parameter Group 0
+    amsgrad: False
+    betas: (0.9, 0.999)
+    eps: 1e-08
+    lr: 0.001
+    weight_decay: 0
+)
+
+2025-12-04 00:49:18 - WARNING - 调度器未设置参数
+
+2025-12-04 00:49:18 - INFO - 损失函数加载...
+{
+  "training": "True",
+  "_parameters": "OrderedDict()",
+  "_buffers": "OrderedDict([('weight', None)])",
+  "_non_persistent_buffers_set": "set()",
+  "_backward_hooks": "OrderedDict()",
+  "_is_full_backward_hook": "None",
+  "_forward_hooks": "OrderedDict()",
+  "_forward_pre_hooks": "OrderedDict()",
+  "_state_dict_hooks": "OrderedDict()",
+  "_load_state_dict_pre_hooks": "OrderedDict()",
+  "_modules": "OrderedDict()",
+  "reduction": "mean",
+  "ignore_index": "-1",
+  "label_smoothing": "0.0"
+}
+
+2025-12-04 00:49:18 - INFO - 
+tensorboard --logdir=/root/autodl-tmp/result_temp/Prototype/checkpoint_12.04_00-49/tensorboard --bind_all --port 6007
+
+2025-12-04 00:49:18 - INFO - 开始训练...
+2025-12-04 01:19:57 - INFO - Epoch:    1/100  lr: 1.000e-03  TrainLoss(1684.72s): 1.5909897909  ValLoss(43.04s): 0.1455424359  
+2025-12-04 01:51:33 - INFO - Epoch:    2/100  lr: 1.000e-03  TrainLoss(1735.69s): 1.1259045159  ValLoss(43.87s): 0.1038485409  
+2025-12-04 02:23:11 - INFO - Epoch:    3/100  lr: 1.000e-03  TrainLoss(1742.55s): 1.0571282101  ValLoss(42.99s): 0.0986694153  
+2025-12-04 02:54:19 - INFO - Epoch:    4/100  lr: 1.000e-03  TrainLoss(1715.07s): 1.0154474908  ValLoss(42.95s): 0.0843048319  
+2025-12-04 03:25:51 - INFO - Epoch:    5/100  lr: 1.000e-03  TrainLoss(1742.68s): 1.0008671822  ValLoss(40.39s): 0.0799667365  
+2025-12-04 03:57:11 - INFO - Epoch:    6/100  lr: 1.000e-03  TrainLoss(1731.58s): 0.9870342590  ValLoss(41.65s): 0.0809526637  
+2025-12-04 04:28:57 - INFO - Epoch:    7/100  lr: 1.000e-03  TrainLoss(1756.44s): 0.9720212940  ValLoss(40.85s): 0.0798170893  
+2025-12-04 05:00:46 - INFO - Epoch:    8/100  lr: 1.000e-03  TrainLoss(1751.64s): 0.9507706454  ValLoss(44.92s): 0.0712618487  
+2025-12-04 05:31:14 - INFO - Epoch:    9/100  lr: 1.000e-03  TrainLoss(1677.74s): 0.9471328383  ValLoss(40.27s): 0.0712966824  
+2025-12-04 06:02:44 - INFO - Epoch:   10/100  lr: 1.000e-03  TrainLoss(1735.78s): 0.9393857664  ValLoss(42.51s): 0.0691768161  
+2025-12-04 06:02:53 - INFO - Test Epoch: 10
+Overall Accuracy: 87.28 || Mean Accuracy: 60.76
+Mean IoU: 45.63 | Per-class IoU:  Ground:85.98  Building:71.81  Tree:59.11  Car:16.62  Light pole:25.37  Fence:14.86
+Macro F1: 57.53 | Per-class  F1:  Ground:92.46  Building:83.59  Tree:74.30  Car:28.50  Light pole:40.47  Fence:25.87
+2025-12-04 06:34:22 - INFO - Epoch:   11/100  lr: 1.000e-03  TrainLoss(1737.41s): 0.9333685388  ValLoss(41.16s): 0.0700506631  
+2025-12-04 07:05:46 - INFO - Epoch:   12/100  lr: 1.000e-03  TrainLoss(1732.08s): 0.9243162480  ValLoss(42.63s): 0.0739646037  
+2025-12-04 07:37:20 - INFO - Epoch:   13/100  lr: 1.000e-03  TrainLoss(1743.96s): 0.9134177181  ValLoss(41.47s): 0.0634592517  
+2025-12-04 08:08:33 - INFO - Epoch:   14/100  lr: 1.000e-03  TrainLoss(1720.58s): 0.9116231742  ValLoss(43.29s): 0.0620382160  
+2025-12-04 08:39:56 - INFO - Epoch:   15/100  lr: 1.000e-03  TrainLoss(1730.61s): 0.9089816399  ValLoss(41.65s): 0.0576825055  
+2025-12-04 09:09:52 - INFO - Epoch:   16/100  lr: 1.000e-03  TrainLoss(1645.26s): 0.9020333144  ValLoss(42.02s): 0.0598776903  
+2025-12-04 09:41:27 - INFO - Epoch:   17/100  lr: 1.000e-03  TrainLoss(1730.52s): 0.8986861170  ValLoss(46.45s): 0.0592759915  
+2025-12-04 10:15:43 - INFO - Epoch:   18/100  lr: 1.000e-03  TrainLoss(1871.88s): 0.8963830460  ValLoss(44.41s): 0.0593922210  
+2025-12-04 10:48:57 - INFO - Epoch:   19/100  lr: 1.000e-03  TrainLoss(1833.85s): 0.8918296553  ValLoss(45.88s): 0.0587141165  
+2025-12-04 11:21:30 - INFO - Epoch:   20/100  lr: 1.000e-03  TrainLoss(1795.36s): 0.8863337459  ValLoss(44.67s): 0.0553199591  
+2025-12-04 11:21:41 - INFO - Test Epoch: 20
+Overall Accuracy: 86.16 || Mean Accuracy: 63.75
+Mean IoU: 46.85 | Per-class IoU:  Ground:85.95  Building:77.15  Tree:51.59  Car:9.09  Light pole:43.01  Fence:14.28
+Macro F1: 58.24 | Per-class  F1:  Ground:92.44  Building:87.10  Tree:68.07  Car:16.67  Light pole:60.15  Fence:24.99
+2025-12-04 11:54:00 - INFO - Epoch:   21/100  lr: 1.000e-03  TrainLoss(1769.44s): 0.8878459546  ValLoss(45.21s): 0.0574483800  
+2025-12-04 12:26:54 - INFO - Epoch:   22/100  lr: 1.000e-03  TrainLoss(1818.48s): 0.8899752236  ValLoss(46.46s): 0.0582098043  
+2025-12-04 13:00:30 - INFO - Epoch:   23/100  lr: 1.000e-03  TrainLoss(1848.34s): 0.8816311886  ValLoss(46.80s): 0.0541391560  
+2025-12-04 13:32:32 - INFO - Epoch:   24/100  lr: 1.000e-03  TrainLoss(1765.89s): 0.8806483983  ValLoss(44.74s): 0.0519885619  
+2025-12-04 14:04:36 - INFO - Epoch:   25/100  lr: 1.000e-03  TrainLoss(1770.87s): 0.8730312785  ValLoss(43.23s): 0.0621755130  
+2025-12-04 14:36:34 - INFO - Epoch:   26/100  lr: 1.000e-03  TrainLoss(1768.84s): 0.8761078019  ValLoss(43.25s): 0.0542279209  
+2025-12-04 15:08:04 - INFO - Epoch:   27/100  lr: 1.000e-03  TrainLoss(1739.87s): 0.8708824364  ValLoss(42.75s): 0.0501714728  
+2025-12-04 15:40:12 - INFO - Epoch:   28/100  lr: 1.000e-03  TrainLoss(1760.46s): 0.8697557231  ValLoss(44.20s): 0.0551869963  
+2025-12-04 16:11:55 - INFO - Epoch:   29/100  lr: 1.000e-03  TrainLoss(1749.95s): 0.8719328090  ValLoss(44.26s): 0.0508229868  
+2025-12-04 16:43:39 - INFO - Epoch:   30/100  lr: 1.000e-03  TrainLoss(1753.57s): 0.8693309065  ValLoss(44.23s): 0.0494389421  
+2025-12-04 16:43:50 - INFO - Test Epoch: 30
+Overall Accuracy: 88.00 || Mean Accuracy: 66.89
+Mean IoU: 51.63 | Per-class IoU:  Ground:85.66  Building:78.56  Tree:63.15  Car:17.25  Light pole:49.20  Fence:15.99
+Macro F1: 63.44 | Per-class  F1:  Ground:92.28  Building:87.99  Tree:77.41  Car:29.42  Light pole:65.95  Fence:27.57
+2025-12-04 17:16:07 - INFO - Epoch:   31/100  lr: 1.000e-03  TrainLoss(1783.83s): 0.8647492334  ValLoss(43.42s): 0.0555077507  
+2025-12-04 17:48:45 - INFO - Epoch:   32/100  lr: 1.000e-03  TrainLoss(1796.89s): 0.8610836028  ValLoss(43.27s): 0.0487231842  
+2025-12-04 18:20:51 - INFO - Epoch:   33/100  lr: 1.000e-03  TrainLoss(1769.40s): 0.8647648253  ValLoss(43.59s): 0.0534464964  
+2025-12-04 18:52:02 - INFO - Epoch:   34/100  lr: 1.000e-03  TrainLoss(1718.66s): 0.8607132843  ValLoss(42.87s): 0.0487615097  
+2025-12-04 19:24:46 - INFO - Epoch:   35/100  lr: 1.000e-03  TrainLoss(1810.48s): 0.8553594169  ValLoss(43.66s): 0.0539881443  
+2025-12-04 19:56:42 - INFO - Epoch:   36/100  lr: 1.000e-03  TrainLoss(1763.53s): 0.8555531700  ValLoss(43.61s): 0.0497608658  
+2025-12-04 20:28:19 - INFO - Epoch:   37/100  lr: 1.000e-03  TrainLoss(1746.07s): 0.8606872479  ValLoss(43.06s): 0.0467492903  
+2025-12-04 20:59:12 - INFO - Epoch:   38/100  lr: 1.000e-03  TrainLoss(1703.52s): 0.8651784425  ValLoss(41.61s): 0.0467451740  
+2025-12-04 21:30:10 - INFO - Epoch:   39/100  lr: 1.000e-03  TrainLoss(1708.18s): 0.8527347198  ValLoss(43.63s): 0.0462588105  
+2025-12-04 22:01:34 - INFO - Epoch:   40/100  lr: 1.000e-03  TrainLoss(1730.71s): 0.8508263271  ValLoss(43.18s): 0.0474362621  
+2025-12-04 22:01:45 - INFO - Test Epoch: 40
+Overall Accuracy: 86.88 || Mean Accuracy: 69.97
+Mean IoU: 48.51 | Per-class IoU:  Ground:86.10  Building:72.24  Tree:58.30  Car:13.15  Light pole:48.02  Fence:13.25
+Macro F1: 60.27 | Per-class  F1:  Ground:92.53  Building:83.88  Tree:73.65  Car:23.25  Light pole:64.89  Fence:23.40
+2025-12-04 22:33:39 - INFO - Epoch:   41/100  lr: 1.000e-03  TrainLoss(1762.25s): 0.8532357816  ValLoss(42.11s): 0.0558581278  
+2025-12-04 23:05:50 - INFO - Epoch:   42/100  lr: 1.000e-03  TrainLoss(1775.77s): 0.8489639044  ValLoss(44.89s): 0.0463573623  
+2025-12-04 23:37:15 - INFO - Epoch:   43/100  lr: 1.000e-03  TrainLoss(1728.20s): 0.8485989236  ValLoss(43.82s): 0.0482578243  
+2025-12-05 00:09:13 - INFO - Epoch:   44/100  lr: 1.000e-03  TrainLoss(1752.88s): 0.8489951082  ValLoss(45.52s): 0.0486015367  
+2025-12-05 00:40:42 - INFO - Epoch:   45/100  lr: 1.000e-03  TrainLoss(1734.81s): 0.8471377263  ValLoss(45.31s): 0.0446835020  
+2025-12-05 01:11:39 - INFO - Epoch:   46/100  lr: 1.000e-03  TrainLoss(1708.92s): 0.8446278002  ValLoss(41.38s): 0.0460992419  
+2025-12-05 01:43:31 - INFO - Epoch:   47/100  lr: 1.000e-03  TrainLoss(1763.32s): 0.8460849213  ValLoss(41.77s): 0.0448069081  
+2025-12-05 02:14:29 - INFO - Epoch:   48/100  lr: 1.000e-03  TrainLoss(1706.74s): 0.8474379236  ValLoss(43.44s): 0.0442474637  
+2025-12-05 02:44:57 - INFO - Epoch:   49/100  lr: 1.000e-03  TrainLoss(1674.74s): 0.8430182022  ValLoss(41.04s): 0.0444916199  
+2025-12-05 03:16:00 - INFO - Epoch:   50/100  lr: 1.000e-03  TrainLoss(1714.45s): 0.8406686899  ValLoss(41.48s): 0.0438222839  
+2025-12-05 03:16:10 - INFO - Test Epoch: 50
+Overall Accuracy: 87.02 || Mean Accuracy: 64.45
+Mean IoU: 47.77 | Per-class IoU:  Ground:85.65  Building:75.38  Tree:56.69  Car:12.75  Light pole:45.81  Fence:10.36
+Macro F1: 59.13 | Per-class  F1:  Ground:92.27  Building:85.96  Tree:72.36  Car:22.61  Light pole:62.83  Fence:18.77
+2025-12-05 03:47:21 - INFO - Epoch:   51/100  lr: 1.000e-03  TrainLoss(1719.22s): 0.8448536740  ValLoss(42.19s): 0.0458218532  
+2025-12-05 04:18:39 - INFO - Epoch:   52/100  lr: 1.000e-03  TrainLoss(1729.66s): 0.8408372523  ValLoss(41.70s): 0.0444432592  
+2025-12-05 04:50:30 - INFO - Epoch:   53/100  lr: 1.000e-03  TrainLoss(1758.24s): 0.8446832178  ValLoss(42.48s): 0.0436889149  
+2025-12-05 05:20:45 - INFO - Epoch:   54/100  lr: 1.000e-03  TrainLoss(1666.47s): 0.8404247311  ValLoss(41.16s): 0.0510138394  
+2025-12-05 05:50:52 - INFO - Epoch:   55/100  lr: 1.000e-03  TrainLoss(1657.60s): 0.8406182508  ValLoss(43.62s): 0.0431014071  
+2025-12-05 06:22:21 - INFO - Epoch:   56/100  lr: 1.000e-03  TrainLoss(1732.84s): 0.8386283890  ValLoss(43.58s): 0.0466782878  
+2025-12-05 06:53:13 - INFO - Epoch:   57/100  lr: 1.000e-03  TrainLoss(1700.53s): 0.8379009940  ValLoss(43.20s): 0.0434052688  
+2025-12-05 07:23:59 - INFO - Epoch:   58/100  lr: 1.000e-03  TrainLoss(1697.43s): 0.8360027705  ValLoss(40.71s): 0.0428091336  
+2025-12-05 07:54:37 - INFO - Epoch:   59/100  lr: 1.000e-03  TrainLoss(1685.76s): 0.8388931004  ValLoss(42.11s): 0.0452320433  
+2025-12-05 08:25:41 - INFO - Epoch:   60/100  lr: 1.000e-03  TrainLoss(1714.15s): 0.8353150877  ValLoss(41.57s): 0.0443847035  
+2025-12-05 08:25:52 - INFO - Test Epoch: 60
+Overall Accuracy: 86.12 || Mean Accuracy: 64.48
+Mean IoU: 47.88 | Per-class IoU:  Ground:85.90  Building:75.51  Tree:54.23  Car:7.91  Light pole:48.16  Fence:15.55
+Macro F1: 59.23 | Per-class  F1:  Ground:92.42  Building:86.04  Tree:70.33  Car:14.65  Light pole:65.01  Fence:26.91
+2025-12-05 08:57:13 - INFO - Epoch:   61/100  lr: 1.000e-03  TrainLoss(1734.04s): 0.8333060625  ValLoss(41.34s): 0.0413620662  
+2025-12-05 09:28:46 - INFO - Epoch:   62/100  lr: 1.000e-03  TrainLoss(1744.98s): 0.8347762691  ValLoss(40.65s): 0.0441259763  
+2025-12-05 10:00:18 - INFO - Epoch:   63/100  lr: 1.000e-03  TrainLoss(1737.99s): 0.8370343138  ValLoss(44.65s): 0.0417254001  
+2025-12-05 10:31:24 - INFO - Epoch:   64/100  lr: 1.000e-03  TrainLoss(1711.66s): 0.8332211280  ValLoss(43.92s): 0.0427643914  
+2025-12-05 11:03:15 - INFO - Epoch:   65/100  lr: 1.000e-03  TrainLoss(1751.31s): 0.8338892812  ValLoss(44.62s): 0.0408274072  
+2025-12-05 11:35:35 - INFO - Epoch:   66/100  lr: 1.000e-03  TrainLoss(1781.92s): 0.8319579604  ValLoss(43.52s): 0.0424285159  
+2025-12-05 12:07:16 - INFO - Epoch:   67/100  lr: 1.000e-03  TrainLoss(1746.46s): 0.8295329583  ValLoss(42.27s): 0.0415631359  
+2025-12-05 12:38:36 - INFO - Epoch:   68/100  lr: 1.000e-03  TrainLoss(1727.75s): 0.8299549266  ValLoss(43.35s): 0.0453365004  
+2025-12-05 13:10:08 - INFO - Epoch:   69/100  lr: 1.000e-03  TrainLoss(1741.34s): 0.8297073199  ValLoss(44.27s): 0.0419833695  
+2025-12-05 13:42:07 - INFO - Epoch:   70/100  lr: 1.000e-03  TrainLoss(1767.14s): 0.8274045886  ValLoss(43.41s): 0.0422935267  
+2025-12-05 13:42:18 - INFO - Test Epoch: 70
+Overall Accuracy: 87.75 || Mean Accuracy: 63.40
+Mean IoU: 49.93 | Per-class IoU:  Ground:85.28  Building:75.83  Tree:62.66  Car:19.51  Light pole:40.98  Fence:15.33
+Macro F1: 62.12 | Per-class  F1:  Ground:92.05  Building:86.25  Tree:77.04  Car:32.65  Light pole:58.14  Fence:26.58
+2025-12-05 14:13:54 - INFO - Epoch:   71/100  lr: 1.000e-03  TrainLoss(1744.71s): 0.8287975498  ValLoss(41.70s): 0.0410879599  
+2025-12-05 14:44:27 - INFO - Epoch:   72/100  lr: 1.000e-03  TrainLoss(1678.60s): 0.8286615059  ValLoss(42.18s): 0.0468849731  
+2025-12-05 15:16:07 - INFO - Epoch:   73/100  lr: 1.000e-03  TrainLoss(1745.53s): 0.8270540292  ValLoss(43.86s): 0.0421846315  
+2025-12-05 15:48:18 - INFO - Epoch:   74/100  lr: 1.000e-03  TrainLoss(1782.65s): 0.8328953855  ValLoss(41.68s): 0.0421678343  
+2025-12-05 16:19:47 - INFO - Epoch:   75/100  lr: 1.000e-03  TrainLoss(1724.07s): 0.8263646972  ValLoss(45.93s): 0.0418891882  
+2025-12-05 16:52:02 - INFO - Epoch:   76/100  lr: 1.000e-03  TrainLoss(1777.46s): 0.8246005451  ValLoss(41.06s): 0.0413117942  
+2025-12-05 17:23:22 - INFO - Epoch:   77/100  lr: 1.000e-03  TrainLoss(1717.40s): 0.8254795592  ValLoss(46.14s): 0.0418330021  
+2025-12-05 17:55:46 - INFO - Epoch:   78/100  lr: 1.000e-03  TrainLoss(1783.94s): 0.8248479863  ValLoss(46.11s): 0.0416880732  
+2025-12-05 18:28:13 - INFO - Epoch:   79/100  lr: 1.000e-03  TrainLoss(1789.74s): 0.8240650628  ValLoss(44.08s): 0.0401746998  
+2025-12-05 19:00:25 - INFO - Epoch:   80/100  lr: 1.000e-03  TrainLoss(1767.92s): 0.8236572229  ValLoss(46.78s): 0.0409475438  
+2025-12-05 19:00:36 - INFO - Test Epoch: 80
+Overall Accuracy: 86.64 || Mean Accuracy: 63.28
+Mean IoU: 49.34 | Per-class IoU:  Ground:85.48  Building:77.95  Tree:56.76  Car:8.57  Light pole:52.07  Fence:15.23
+Macro F1: 60.48 | Per-class  F1:  Ground:92.17  Building:87.61  Tree:72.41  Car:15.79  Light pole:68.48  Fence:26.43
+2025-12-05 19:33:17 - INFO - Epoch:   81/100  lr: 1.000e-03  TrainLoss(1794.69s): 0.8221705049  ValLoss(47.15s): 0.0400170302  
+2025-12-05 20:05:43 - INFO - Epoch:   82/100  lr: 1.000e-03  TrainLoss(1789.85s): 0.8221009193  ValLoss(43.92s): 0.0415175248  
+2025-12-05 20:38:59 - INFO - Epoch:   83/100  lr: 1.000e-03  TrainLoss(1835.75s): 0.8225539071  ValLoss(47.01s): 0.0406395581  
+2025-12-05 21:10:24 - INFO - Epoch:   84/100  lr: 1.000e-03  TrainLoss(1731.34s): 0.8220673907  ValLoss(45.45s): 0.0429093342  
+2025-12-05 21:41:42 - INFO - Epoch:   85/100  lr: 1.000e-03  TrainLoss(1726.93s): 0.8208023624  ValLoss(41.20s): 0.0412739377  
+2025-12-05 22:12:02 - INFO - Epoch:   86/100  lr: 1.000e-03  TrainLoss(1672.07s): 0.8237769806  ValLoss(42.08s): 0.0421786131  
+2025-12-05 22:43:35 - INFO - Epoch:   87/100  lr: 1.000e-03  TrainLoss(1745.52s): 0.8206064635  ValLoss(40.64s): 0.0424071553  
+2025-12-05 23:14:52 - INFO - Epoch:   88/100  lr: 1.000e-03  TrainLoss(1723.98s): 0.8191378673  ValLoss(43.61s): 0.0407985051  
+2025-12-05 23:45:53 - INFO - Epoch:   89/100  lr: 1.000e-03  TrainLoss(1700.00s): 0.8190725995  ValLoss(43.36s): 0.0413470525  
+2025-12-06 00:16:52 - INFO - Epoch:   90/100  lr: 1.000e-03  TrainLoss(1707.73s): 0.8190533519  ValLoss(43.52s): 0.0430531966  
+2025-12-06 00:17:02 - INFO - Test Epoch: 90
+Overall Accuracy: 87.32 || Mean Accuracy: 62.77
+Mean IoU: 48.08 | Per-class IoU:  Ground:85.82  Building:76.61  Tree:59.33  Car:12.24  Light pole:40.76  Fence:13.73
+Macro F1: 59.58 | Per-class  F1:  Ground:92.37  Building:86.76  Tree:74.47  Car:21.81  Light pole:57.92  Fence:24.15
+2025-12-06 00:48:04 - INFO - Epoch:   91/100  lr: 1.000e-03  TrainLoss(1709.66s): 0.8185914590  ValLoss(44.94s): 0.0479504832  
+2025-12-06 01:19:34 - INFO - Epoch:   92/100  lr: 1.000e-03  TrainLoss(1740.96s): 0.8188615871  ValLoss(42.55s): 0.0400171458  
+2025-12-06 01:51:43 - INFO - Epoch:   93/100  lr: 1.000e-03  TrainLoss(1778.67s): 0.8176171092  ValLoss(40.81s): 0.0403845599  
+2025-12-06 02:23:23 - INFO - Epoch:   94/100  lr: 1.000e-03  TrainLoss(1751.74s): 0.8187348627  ValLoss(41.97s): 0.0399197482  
+2025-12-06 02:53:52 - INFO - Epoch:   95/100  lr: 1.000e-03  TrainLoss(1677.38s): 0.8271827958  ValLoss(42.38s): 0.0402694489  
+2025-12-06 03:25:03 - INFO - Epoch:   96/100  lr: 1.000e-03  TrainLoss(1712.43s): 0.8159539505  ValLoss(43.88s): 0.0402314650  
+2025-12-06 03:56:43 - INFO - Epoch:   97/100  lr: 1.000e-03  TrainLoss(1745.06s): 0.8149590626  ValLoss(45.24s): 0.0400464326  
+2025-12-06 04:27:24 - INFO - Epoch:   98/100  lr: 1.000e-03  TrainLoss(1691.80s): 0.8171193889  ValLoss(42.40s): 0.0413422259  
+2025-12-06 04:58:51 - INFO - Epoch:   99/100  lr: 1.000e-03  TrainLoss(1731.70s): 0.8158032079  ValLoss(43.09s): 0.0418466840  
+2025-12-06 05:30:09 - INFO - Epoch:  100/100  lr: 1.000e-03  TrainLoss(1728.29s): 0.8156662395  ValLoss(43.65s): 0.0408700121  
+2025-12-06 05:30:20 - INFO - Test Epoch: 100
+Overall Accuracy: 86.64 || Mean Accuracy: 63.10
+Mean IoU: 47.82 | Per-class IoU:  Ground:85.10  Building:74.50  Tree:57.92  Car:11.46  Light pole:43.55  Fence:14.37
+Macro F1: 59.51 | Per-class  F1:  Ground:91.95  Building:85.39  Tree:73.36  Car:20.57  Light pole:60.68  Fence:25.13
+2025-12-06 05:30:20 - INFO - 训练结束 总耗时：2 days, 4:41:01.751740
+2025-12-06 05:30:20 - INFO - 
+>>>Best MeanIOU<<<
+2025-12-06 05:30:20 - INFO - Test Epoch: 30
+Overall Accuracy: 88.00 || Mean Accuracy: 66.89
+Mean IoU: 51.63 | Per-class IoU:  Ground:85.66  Building:78.56  Tree:63.15  Car:17.25  Light pole:49.20  Fence:15.99
+Macro F1: 63.44 | Per-class  F1:  Ground:92.28  Building:87.99  Tree:77.41  Car:29.42  Light pole:65.95  Fence:27.57
