@@ -32,5 +32,5 @@ if __name__ == '__main__':
   
     # mink.training_module(weights_pretrain=None, eval_pretrain=True, trainingTest=True, trainingVal=True)
   
-    test_pth = f'/home/huiwei/Desktop/Code/result_temp/_valid_/H3D_AS/trained_300.pth'
+    test_pth = f'/your/test/path/trained.pth'
     mink.test_module(test_pth)
