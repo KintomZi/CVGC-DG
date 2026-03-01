@@ -1,47 +1,52 @@
 # @Note :H3D to PL3D&ISPRS
 file:
-  #存放训练的数据文件夹
+  # Folder containing training data
   folder_train: '/home/huiwei/Desktop/autodl-tmp/sim2real/H3D/train_S32(50)-32(50)'
-  #存放测试的数据文件夹
+  # Folder containing test data
   folder_test: '/home/huiwei/Desktop/autodl-tmp/sim2real/PL3D/test_S32(0)-32(0)'
-  #存放pth和log的文件夹
+  # Folder for saving model checkpoints (.pth) and log files
   result_folder: '/home/huiwei/Desktop/Code/result_temp/H3D'
 
 env:
-  seed: 2024
-  num_workers: 10
+  seed: 2024  # Random seed for reproducibility
+  num_workers: 10  # Number of worker processes for DataLoader
 
 dataset:
-  center_type: -1 # 点云的原点坐标的选取
-  # -1: 三维坐标的最小值
-  # 0: 三维的坐标均值中心
-  # 1：二维平面的均值中心，z轴不改变
-  # 2：1m/bin中点数量<1000的首个bin中心
-  voxel_size: 0.25
-  aug_parameter: 'DGLSS' # 'Mix3D' 'GrowSP'
-  # 地面(0),建筑物/人造物(1),植被(2),车(3),杆柱(4),栅栏(5),
+  center_type: -1  # Method for selecting point cloud origin coordinate
+  # -1: Minimum value of 3D coordinates (min-x, min-y, min-z)
+  #  0: Centroid of 3D coordinates (mean of x, y, z)
+  #  1: Centroid of XY plane only, Z-axis remains unchanged
+  #  2: Center of the first 1m bin with point count < 1000 (binning along Z-axis)
+  
+  voxel_size: 0.25  # Voxel size for sparse voxelization (meters)
+  aug_parameter: 'DGLSS'  # Data augmentation strategy: 'Mix3D' | 'GrowSP' | 'DGLSS'
+  
   label_to_names:
-    -1: undefined
+    -1: undefined  # Invalid/ignored label
     0: Ground
     1: Building
-    2: Natrual
+    2: Natural
     3: Vehicle
     4: Urban Furniture
+    
   ignore_label:
-    - -1  # 必须存在,无效标签
+    - -1  # Required: labels to be ignored during loss computation (must include -1)
 
 model:
-  train_epoch: 300
-  train_batch_size: 4
-  val_batch_size: 2
-  test_batch_size: 2
-  test_interval: 10 # 每隔多少个epoch测试一次
-
-  learning_rate: 0.001 # optimizer
-  # scheduler参数，由于方法多样性无法固定，在代码里面配置
-
-  input_features_dim: 3
-  output_class_dim: 5
+  train_epoch: 300  # Total number of training epochs
+  train_batch_size: 4  # Batch size for training
+  val_batch_size: 2  # Batch size for validation
+  test_batch_size: 2  # Batch size for testing
+  
+  test_interval: 10  # Evaluation frequency: run test every N epochs
+  
+  learning_rate: 0.001  # Initial learning rate for optimizer
+  
+  # Scheduler parameters: configured dynamically in code due to method diversity
+  # (e.g., StepLR, CosineAnnealingLR, ReduceLROnPlateau, etc.)
+  
+  input_features_dim: 3  # Input feature dimension (e.g., XYZ coordinates)
+  output_class_dim: 5  # Number of output semantic classes (excluding ignored labels)
 
 
 
