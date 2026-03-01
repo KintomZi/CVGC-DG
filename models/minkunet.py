@@ -8,13 +8,16 @@ import pdb
 
 
 class MinkUNetBase(ResNetBase):
+    """
+    Base class for Minkowski U-Net architecture.
+    """
     BLOCK = None
     PLANES = None
-    DILATIONS = (1, 1, 1, 1, 1, 1, 1, 1)  # 空洞卷积的膨胀率配置
-    LAYERS = (2, 2, 2, 2, 2, 2, 2, 2)  # 各层的残差块数量
-    PLANES = (32, 64, 128, 256, 256, 128, 96, 96)  # 各层的通道数配置
-    INIT_DIM = 32  # 网络初始通道数
-    OUT_TENSOR_STRIDE = 1  # 输出张量的步长
+    DILATIONS = (1, 1, 1, 1, 1, 1, 1, 1)  # Dilation rates for dilated convolutions
+    LAYERS = (2, 2, 2, 2, 2, 2, 2, 2)  # Number of residual blocks per layer
+    PLANES = (32, 64, 128, 256, 256, 128, 96, 96)  # Number of channels per layer
+    INIT_DIM = 32  # Initial number of channels for the network
+    OUT_TENSOR_STRIDE = 1  # Stride of the output tensor
 
     # To use the model, must call initialize_coords before forward pass.
     # Once data is processed, call clear to reset the model before calling
@@ -24,10 +27,10 @@ class MinkUNetBase(ResNetBase):
 
     def network_initialization(self, in_channels, out_channels, D):
         # Output of the first conv concated to conv6
-        # 初始通道数
+        # Initial channel count
         self.inplanes = self.INIT_DIM
 
-        # 编码阶段 (下采样)
+        # ========== Encoder Stage (Downsampling) ==========
         self.conv0p1s1 = ME.MinkowskiConvolution(
             in_channels, self.inplanes, kernel_size=5, dimension=D)
         self.bn0 = ME.MinkowskiBatchNorm(self.inplanes)
@@ -52,7 +55,7 @@ class MinkUNetBase(ResNetBase):
         self.bn4 = ME.MinkowskiBatchNorm(self.inplanes)
         self.block4 = self._make_layer(self.BLOCK, self.PLANES[3], self.LAYERS[3])
 
-        # 解码阶段 (反卷积 + 拼接)
+        # ========== Decoder Stage (Transpose Conv + Skip Connections) ==========
         self.convtr4p16s2 = ME.MinkowskiConvolutionTranspose(
             self.inplanes, self.PLANES[4], kernel_size=2, stride=2, dimension=D)
         self.bntr4 = ME.MinkowskiBatchNorm(self.PLANES[4])
@@ -91,29 +94,12 @@ class MinkUNetBase(ResNetBase):
         self.dropout = ME.MinkowskiDropout(p=0.5)
 
     def forward_original(self, x, is_seg=True, layers=[], use_last=False, use_both=False):
-        """
-        前向传播函数
-
-        Args:
-            x: 输入稀疏张量
-            is_seg: 是否用于分割任务
-            layers: 需要返回的层索引列表
-            use_last: 是否返回最终特征和输出
-            use_both: 是否返回最终输出、特征和中间特征
-
-        Returns:
-            根据参数返回不同的输出组合
-        """
-        # 确保layers是列表类型
         assert isinstance(layers, list), 'layers should be a list.'
-        # 如果layers为空，默认返回第4层特征
         if len(layers) == 0:
             layers = [4]
 
-        # 用于存储需要返回的中间特征
         out_tuple = ()
 
-        # ========== 编码阶段 ==========
         out = self.conv0p1s1(x)
         out = self.bn0(out)
         out_p1 = self.relu(out)
@@ -147,7 +133,7 @@ class MinkUNetBase(ResNetBase):
         if 4 in layers:
             out_tuple += (out_b4p16,)
 
-        # ========== 解码阶段 ==========
+        # ====================
         # tensor_stride=8
         out = self.convtr4p16s2(out_b4p16)
         out = self.bntr4(out)
@@ -200,13 +186,26 @@ class MinkUNetBase(ResNetBase):
             return out_tuple
 
     def forward(self, x, layers: list = None):
-        # ========== 编码阶段 ==========
+        """        
+
+        Args:
+            x: Input sparse tensor.
+            layers (list, optional): List of layer indices whose intermediate features to return.
+                Default is [4] (bottleneck features).
+
+        Returns:
+            tuple:
+                - final_logits: Output logits after final convolution (for segmentation).
+                - out: Final decoder features before final conv.
+                - out_tuple: Tuple of intermediate features from specified layers.
+        """
+        # ========== Encoder Stage ==========
         if layers is None:
             layers = [4]
-        # 确保layers是列表类型
+        # Ensure layers is a list
         assert isinstance(layers, list), 'layers should be a list.'
 
-        # 用于存储需要返回的中间特征
+        # Store intermediate features to be returned
         out_tuple = ()
 
         out = self.relu(self.bn0(self.conv0p1s1(x)))
@@ -232,27 +231,27 @@ class MinkUNetBase(ResNetBase):
         if 4 in layers:
             out_tuple += (out_b4p16,)
 
-        # ========== 解码阶段 ==========
+        # ========== Decoder Stage ==========
         out = self.relu(self.bntr4(self.convtr4p16s2(out_b4p16)))
-        out = ME.cat(out, out_b3p8)
+        out = ME.cat(out, out_b3p8)  # Skip connection
         out_b5p8 = self.block5(out)
         if 5 in layers:
             out_tuple += (out_b5p8,)
 
         out = self.relu(self.bntr5(self.convtr5p8s2(out_b5p8)))
-        out = ME.cat(out, out_b2p4)
+        out = ME.cat(out, out_b2p4)  # Skip connection
         out_b6p4 = self.block6(out)
         if 6 in layers:
             out_tuple += (out_b6p4,)
 
         out = self.relu(self.bntr6(self.convtr6p4s2(out_b6p4)))
-        out = ME.cat(out, out_b1p2)
+        out = ME.cat(out, out_b1p2)  # Skip connection
         out_b7p2 = self.block7(out)
         if 7 in layers:
             out_tuple += (out_b7p2,)
 
         out = self.relu(self.bntr7(self.convtr7p2s2(out_b7p2)))
-        out = ME.cat(out, out_p1)
+        out = ME.cat(out, out_p1)  # Skip connection
         out = self.block8(out)
         if 8 in layers:
             out_tuple += (out,)
