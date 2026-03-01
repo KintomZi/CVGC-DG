@@ -17,7 +17,7 @@ Here is test weight for H3D to PL3D&ISPRS. ([Google Drive](https://drive.google.
 # Cite
 Please cite our work if you find it useful.
 ```bibtex
-@misc{zhao2026crossview,
+@article{zhao2026crossview,
       title={Cross-view Domain Generalization via Geometric Consistency for LiDAR Semantic Segmentation}, 
       author={Jindong Zhao and Yuan Gao and Yang Xia and Sheng Nie and Jun Yue and Weiwei Sun and Shaobo Xia},
       year={2026},
