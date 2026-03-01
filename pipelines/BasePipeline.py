@@ -10,49 +10,50 @@ from torch.utils.tensorboard import SummaryWriter
 
 
 def seed_everything(seed: int):
-    random.seed(seed)  # 1. 设置Python内置random模块的种子
-    np.random.seed(seed)  # 2. 设置numpy的随机种子
-    torch.manual_seed(seed)  # 3. 设置PyTorch的随机种子
-    # 4. 设置CUDA的随机种子（如果使用GPU）
+    random.seed(seed)  # 1. Set seed for Python's built-in random module
+    np.random.seed(seed)  # 2. Set seed for NumPy random number generator
+    torch.manual_seed(seed)  # 3. Set seed for PyTorch random number generator
+    # 4. Set seed for CUDA random number generator (if using GPU)
     if torch.cuda.is_available():
         torch.cuda.manual_seed(seed)
-        torch.cuda.manual_seed_all(seed)  # 如果使用多GPU
-        # 5. 设置CUDA的后端
-        torch.backends.cudnn.deterministic = True  # 确保每次返回的卷积算法是确定的
-        torch.backends.cudnn.benchmark = False  # 禁用cudnn的随机性
-    os.environ['PYTHONHASHSEED'] = str(seed)  # 6. 设置Python的hash种子
+        torch.cuda.manual_seed_all(seed)  # If using multi-GPU
+        # 5. Configure CUDA backend for deterministic behavior
+        torch.backends.cudnn.deterministic = True  # Ensure deterministic convolution algorithms
+        torch.backends.cudnn.benchmark = False  # Disable cudnn's non-deterministic optimizations
+    os.environ['PYTHONHASHSEED'] = str(seed)  # 6. Set Python hash seed for reproducibility
 
 
 class PredictionProcessor:
     @staticmethod
     def confidence(pred_logits, conf_threshold, ignore_label=-1):
         """
-        根据预测 logits 和置信度阈值，生成伪标签和有效掩码。
+        Generate pseudo-labels and validity mask based on prediction logits and confidence threshold.
 
         Args:
-            pred_logits (Tensor[N, C]): 模型输出的类别 logits，形状为 [N, C]
-            conf_threshold (float): 置信度阈值 (0, 1]，小于等于该值的预测将被忽略
-            ignore_label (int): 对低置信度位置填充的标签值（通常设为 -1）
+            pred_logits (Tensor[N, C]): Model output class logits, shape [N, C].
+            conf_threshold (float): Confidence threshold (0, 1]; predictions with confidence 
+                less than or equal to this value will be ignored.
+            ignore_label (int): Label value assigned to low-confidence positions (typically -1).
 
         Returns:
-            pseudo_labels (Tensor[N]): 伪标签数组，低置信度点被设置为 ignore_label
-            valid_mask (Tensor[N], bool): 有效点掩码，True 表示置信度大于阈值
+            pseudo_labels (Tensor[N]): Pseudo-label array; low-confidence points are set to ignore_label.
+            valid_mask (Tensor[N], bool): Validity mask for points; True indicates confidence exceeds threshold.
         """
-        # 将 logits 转为概率分布 [N, C]
+        # Convert logits to probability distribution [N, C]
         class_probs = torch.nn.functional.softmax(pred_logits, dim=-1)
 
-        # 找到每个点的最大类别概率及其类别索引
+        # Find maximum class probability and its class index for each point
         max_probs, max_classes = class_probs.max(dim=-1)  # [N], [N]
 
-        # 按阈值过滤
+        # Filter by threshold
         if 0 < conf_threshold <= 1:
-            valid_mask = max_probs > conf_threshold  # 有效点掩码
-            # 初始化为 ignore_label
+            valid_mask = max_probs > conf_threshold  # Validity mask for points
+            # Initialize with ignore_label
             pseudo_labels = torch.full_like(max_classes, fill_value=ignore_label)
-            # 仅保留高置信度的标签
+            # Retain only high-confidence labels
             pseudo_labels[valid_mask] = max_classes[valid_mask]
         else:
-            # 阈值无效时，全部保留
+            # If threshold is invalid, retain all predictions
             valid_mask = torch.ones_like(max_classes, dtype=torch.bool)
             pseudo_labels = max_classes
 
@@ -61,52 +62,53 @@ class PredictionProcessor:
     @staticmethod
     def remap_gt_labels(gt_labels, label2name, ignore_labels, output_class_dim, fill_value=-1):
         """
-        将原始 GT 标签映射为从 0 开始的连续类别索引，并忽略指定标签。
+        Remap original ground truth labels to consecutive indices starting from 0, 
+        while ignoring specified labels.
 
         Args:
-            gt_labels (array-like): 原始标签数组
-            label2name (dict): {原始标签ID: 类别名称}
-            ignore_labels (int | list | tuple): 要忽略的标签
-            output_class_dim (int): 输出类别数量
-            fill_value (int): 被忽略位置的填充值
+            gt_labels (array-like): Original label array.
+            label2name (dict): {original_label_id: class_name}.
+            ignore_labels (int | list | tuple): Labels to be ignored.
+            output_class_dim (int): Number of output classes.
+            fill_value (int): Fill value for ignored positions.
 
         Returns:
-            converted_labels (ndarray): 转换后的标签
-            keep_indices (ndarray): 保留的索引位置
-            label2name_updated (dict): {新标签ID: 类别名称}
+            converted_labels (ndarray): Remapped labels.
+            keep_indices (ndarray): Indices of retained positions.
+            label2name_updated (dict): {new_label_id: class_name}.
         """
-        # 确保 ignore_labels 为列表
-        if isinstance(ignore_labels, (int, np.integer)):  # 单个 int 转 list
+        # Ensure ignore_labels is a list
+        if isinstance(ignore_labels, (int, np.integer)):  # Convert single int to list
             ignore_labels = [ignore_labels]
-        elif isinstance(ignore_labels, ListConfig):  # ListConfig 转普通 list
+        elif isinstance(ignore_labels, ListConfig):  # Convert ListConfig to standard list
             ignore_labels = list(ignore_labels)
-        elif not isinstance(ignore_labels, (list, tuple)):  # 不支持的类型报错
-            raise TypeError(f"ignore_labels 类型不支持: {type(ignore_labels)}")
+        elif not isinstance(ignore_labels, (list, tuple)):  # Raise error for unsupported types
+            raise TypeError(f"ignore_labels type not supported: {type(ignore_labels)}")
 
-        # 有效标签 = label2name 中除 ignore_labels 外的标签
+        # Effective labels = labels in label2name excluding ignore_labels
         all_labels = list(label2name.keys())
         effective_labels = sorted(set(all_labels) - set(ignore_labels))
 
-        # 检查有效标签数量是否与模型输出一致
+        # Check if number of effective labels matches model output dimension
         if len(effective_labels) != output_class_dim:
             raise ValueError(
-                f"有效标签数量 {len(effective_labels)} ({effective_labels}) "
-                f"不等于输出类别维度 {output_class_dim}。"
+                f"Number of effective labels {len(effective_labels)} ({effective_labels}) "
+                f"does not match output class dimension {output_class_dim}."
             )
 
-        # 验证输入标签合法性
+        # Validate input label legality
         unique_labels = np.unique(gt_labels)
         if not set(unique_labels).issubset(all_labels):
             invalids = set(unique_labels) - set(all_labels)
-            raise ValueError(f"发现未在 label2name 中定义的标签: {invalids}")
+            raise ValueError(f"Labels not defined in label2name found: {invalids}")
 
-        # 创建映射：旧ID → 新ID
+        # Create mapping: old_id → new_id
         old_to_new = {old: new for new, old in enumerate(effective_labels)}
 
-        # 创建映射：新ID → 类别名称（用于评估阶段）
+        # Create mapping: new_id → class name (for evaluation phase)
         label2name_updated = {new: label2name[old] for old, new in old_to_new.items()}
 
-        # 转换标签
+        # Convert labels
         gt_array = np.array(gt_labels)
         keep_mask = np.isin(gt_array, effective_labels)
         keep_indices = np.where(keep_mask)[0]
@@ -116,59 +118,59 @@ class PredictionProcessor:
 
         return converted_labels, keep_indices, label2name_updated
 
-    @staticmethod
+       @staticmethod
     def compute_metrics(gt, preds, label2name=None, ignore_labels=(-1,)):
         """
-        计算语义分割/分类任务常用指标（忽略指定标签）
+        Compute common metrics for semantic segmentation/classification tasks (ignoring specified labels).
 
         Args:
-            gt (ndarray): 真实标签 (N,)
-            preds (ndarray): 预测标签 (N,)
-            label2name (dict | None): {类别ID: 类别名称}，可选
-            ignore_labels (int | list | tuple): 忽略的类别ID
+            gt (ndarray): Ground truth labels, shape (N,).
+            preds (ndarray): Predicted labels, shape (N,).
+            label2name (dict | None): {class_id: class_name}, optional.
+            ignore_labels (int | list | tuple): Class IDs to ignore.
 
         Returns:
-            metrics (dict): 包含 OA、mAcc、mIoU、mF1、混淆矩阵等
+            metrics (dict): Dictionary containing OA, mAcc, mIoU, mF1, confusion matrix, etc.
         """
-        # 参数预处理
-        # 确保 ignore_label_ids 转为 list
-        if isinstance(ignore_labels, (int, np.integer)):  # 单个 int
+        # Parameter preprocessing
+        # Ensure ignore_labels is converted to list
+        if isinstance(ignore_labels, (int, np.integer)):  # Single int
             ignore_labels = [ignore_labels]
         elif isinstance(ignore_labels, ListConfig):  # ListConfig → list
             ignore_labels = list(ignore_labels)
         elif not isinstance(ignore_labels, (list, tuple)):
-            raise TypeError(f"ignore_label_ids 类型不支持: {type(ignore_labels)}")
+            raise TypeError(f"ignore_label_ids type not supported: {type(ignore_labels)}")
 
-        # 转 numpy 并展平
+        # Convert to numpy and flatten
         gt = np.asarray(gt).flatten()
         preds = np.asarray(preds).flatten()
 
         if gt.shape != preds.shape:
-            raise ValueError("GT 与预测结果的形状不一致")
+            raise ValueError("Shape mismatch between GT and predictions")
 
-        # ---------------- 标签检查与名称映射 ----------------
+        # ---------------- Label validation and name mapping ----------------
         if label2name is None:
-            # 默认类别名称为字符串形式的类别 ID
+            # Default class names as string-formatted class IDs
             label2name = {i: str(i) for i in np.unique(gt) if i not in ignore_labels}
         else:
-            # 确保 GT 和预测类别都在已知类别或忽略标签中
+            # Ensure GT and prediction classes are in known classes or ignore labels
             known_labels = set(label2name.keys()) | set(ignore_labels)
             if not set(gt).issubset(known_labels):
                 invalid_gt = set(gt) - known_labels
-                raise ValueError(f"GT 中存在未知类别: {invalid_gt}")
+                raise ValueError(f"Unknown classes in GT: {invalid_gt}")
             if not set(preds).issubset(known_labels):
                 invalid_preds = set(preds) - known_labels
-                raise ValueError(f"预测结果中存在未知类别: {invalid_preds}")
+                raise ValueError(f"Unknown classes in predictions: {invalid_preds}")
 
-        # 获取类别全集（除 ignore_labels 外）
+        # Get full class set (excluding ignore_labels)
         all_classes = sorted(set(label2name.keys()) - set(ignore_labels))
 
-        # 过滤 ignore_labels
+        # Filter out ignore_labels
         mask = ~np.isin(gt, ignore_labels)
         gt = gt[mask]
         preds = preds[mask]
 
-        # 构造混淆矩阵
+        # Construct confusion matrix
         num_classes = len(all_classes)
         label_to_index = {label: idx for idx, label in enumerate(all_classes)}
         gt_idx = np.array([label_to_index[l] for l in gt])
@@ -178,7 +180,7 @@ class PredictionProcessor:
             minlength=num_classes**2
         ).reshape(num_classes, num_classes)
 
-        # 计算指标
+        # Compute metrics
         tp = np.diag(cm)
         fp = cm.sum(axis=0) - tp
         fn = cm.sum(axis=1) - tp
@@ -192,7 +194,7 @@ class PredictionProcessor:
         f1 = 2 * tp / (2 * tp + fp + fn + 1e-8)
         mean_f1 = np.mean(f1)
 
-        # 每类详细信息
+        # Per-class detailed information
         class_info = {
             label2name[cls]: {
                 'id_confusion': idx,
@@ -211,31 +213,31 @@ class PredictionProcessor:
             'confusion_matrix': cm,
             'class_info': class_info
         }
-
+        
     @staticmethod
     def metrics2text(metrics_dict):
         """
-        将 compute_metrics 的结果格式化为可读文本。
+        Format the results from compute_metrics into readable text.
 
         Args:
-            metrics_dict (dict): compute_metrics 的返回结果
+            metrics_dict (dict): Return value from compute_metrics.
 
         Returns:
-            str: 格式化的指标文本
+            str: Formatted metric text.
         """
-        # 整体指标
+        # Overall metrics
         oa = metrics_dict['oa'] * 100  # Overall Accuracy
         mean_acc = metrics_dict['mean_acc'] * 100  # Mean Accuracy
         mean_iou = metrics_dict['mean_iou'] * 100  # Mean IoU
         mean_f1 = metrics_dict['mean_f1'] * 100  # Macro F1
 
-        # 提取每类指标
+        # Extract per-class metrics
         class_info = metrics_dict['class_info']
         class_names = list(class_info.keys())
         ious = [class_info[n]['iou'] * 100 for n in class_names]
         f1s = [class_info[n]['f1'] * 100 for n in class_names]
 
-        # 构造文本
+        # Construct text output
         metric_text = (
                 f"Overall Accuracy: {oa:.2f} || Mean Accuracy: {mean_acc:.2f}\n"
                 f"Mean IoU: {mean_iou:.2f} | Per-class IoU:  " +
@@ -251,23 +253,23 @@ class PredictionProcessor:
 
 class BaseRecorder:
     def __init__(self, result_folder_path, timestamp_start):
-        # 初始化时间戳
+        # Initialize timestamp
         self.timestamp_start = timestamp_start
 
-        # 验证并设置结果路径
+        # Validate and set result path
         self.result_path = result_folder_path
 
-        # 初始化子目录和工具
-        self.ckpt_folder = self._ckpt_folder_init()  # 创建 checkpoint 子文件夹
-        self.logger = self._logger_init(self.ckpt_folder)  # 初始化 logger
-        self.tensorboard = self._tensorboard_init(self.ckpt_folder)  # 初始化 TensorBoard writer
+        # Initialize subdirectories and utilities
+        self.ckpt_folder = self._ckpt_folder_init()  # Create checkpoint subfolder
+        self.logger = self._logger_init(self.ckpt_folder)  # Initialize logger
+        self.tensorboard = self._tensorboard_init(self.ckpt_folder)  # Initialize TensorBoard writer
 
     def _ckpt_folder_init(self):
         """
-        创建用于保存模型的 checkpoint 文件夹，若存在重名目录则自动编号。
+        Create checkpoint folder for saving models; automatically append suffix if directory with same name exists.
 
         Returns:
-            ckpt_dir: str，最终创建的 checkpoint 路径
+            ckpt_dir: str, final created checkpoint path.
         """
         ckpt_dir_name = f"checkpoint_{self.timestamp_start.strftime('%m.%d_%H-%M')}"
         ckpt_dir = os.path.join(self.result_path, ckpt_dir_name)
@@ -278,30 +280,30 @@ class BaseRecorder:
         os.makedirs(ckpt_dir, exist_ok=True)
         return ckpt_dir
 
-    @staticmethod  # 定义为静态方法
+    @staticmethod  # Defined as static method
     def _logger_init(checkpoint_folder):
         """
-        配置日志记录器，输出到文件和终端控制台。
+        Configure logger to output to both file and console.
 
         Returns:
-            logger: logging.Logger 实例
+            logger: logging.Logger instance.
         """
-        # 配置日志记录器
+        # Configure logger
         logger = logging.getLogger(os.path.basename(checkpoint_folder))
-        logger.setLevel(logging.INFO)  # 设置默认日志级别
+        logger.setLevel(logging.INFO)  # Set default log level
 
-        # 检查是否已配置过 Handler，避免重复添加
+        # Check if handlers are already configured to avoid duplicates
         if not logger.handlers:
-            # 文件日志
+            # File handler
             log_file = os.path.join(checkpoint_folder, f"{os.path.basename(checkpoint_folder)}.log")
             file_handler = logging.FileHandler(log_file)
             file_handler.setLevel(logging.INFO)
 
-            # 控制台日志
+            # Console handler
             console_handler = logging.StreamHandler()
             console_handler.setLevel(logging.INFO)
 
-            # 格式设置
+            # Format configuration
             formatter = logging.Formatter(
                 "%(asctime)s - %(levelname)s - %(message)s",
                 datefmt="%Y-%m-%d %H:%M:%S"
@@ -309,20 +311,20 @@ class BaseRecorder:
             file_handler.setFormatter(formatter)
             console_handler.setFormatter(formatter)
 
-            # 添加 Handler 到 Logger
+            # Add handlers to logger
             logger.addHandler(file_handler)
             logger.addHandler(console_handler)
         return logger
 
-    @staticmethod  # 定义为静态方法
+    @staticmethod  # Defined as static method
     def _tensorboard_init(checkpoint_folder):
         """
-        初始化 TensorBoard 日志目录与写入器。
+        Initialize TensorBoard log directory and writer.
 
         Returns:
-            writer: SummaryWriter 实例
+            writer: SummaryWriter instance.
         """
-        # TensorBoard目录
+        # TensorBoard directory
         tensorboard_dir = os.path.join(checkpoint_folder, 'tensorboard')
         os.makedirs(tensorboard_dir, exist_ok=True)
         writer = SummaryWriter(log_dir=tensorboard_dir)
@@ -330,33 +332,34 @@ class BaseRecorder:
 
     def save_tsne_embedding(self, features, labels, global_step=0, tag="embedding"):
         """
-        保存特征和标签用于 TensorBoard 的 t-SNE 可视化。TensorBoard 嵌入可视化不适合 >10k 样本
+        Save features and labels for TensorBoard t-SNE visualization. 
+        TensorBoard embedding visualization is not suitable for >10k samples.
 
         Args:
-            features (np.ndarray or torch.Tensor): 形状为 (N, D) 的嵌入向量。
-            labels (list or np.ndarray): 长度为 N 的标签列表（字符串或可转为字符串）。
-            global_step (int): 对应的训练步数（可选，默认 0）。
-            tag (str): 嵌入的命名空间（可选，默认 "embedding"）。
+            features (np.ndarray or torch.Tensor): Embedding vectors with shape (N, D).
+            labels (list or np.ndarray): Label list of length N (strings or convertible to strings).
+            global_step (int): Corresponding training step (optional, default 0).
+            tag (str): Namespace for embedding (optional, default "embedding").
         """
         try:
-            # 若为 Tensor，转换为 numpy 数组
+            # Convert to numpy array if Tensor
             if isinstance(features, torch.Tensor):
                 features = features.detach().cpu().numpy()
             if isinstance(labels, torch.Tensor):
                 labels = labels.detach().cpu().numpy()
 
-            # 确保 numpy 类型
+            # Ensure numpy type
             features = np.asarray(features)
             labels = np.asarray(labels)
 
-            # 检查样本数量是否匹配
+            # Check if sample counts match
             assert features.shape[0] == len(labels), \
-                f"特征数 ({features.shape[0]}) 与标签数 ({len(labels)}) 不匹配！"
+                f"Feature count ({features.shape[0]}) does not match label count ({len(labels)})!"
 
             num_samples = features.shape[0]
             unique_labels = np.unique(labels)
 
-            # ---------- 类别均衡采样 ----------
+            # ---------- Class-balanced sampling ----------
             selected_indices = []
             per_class_info = {}
 
@@ -364,27 +367,27 @@ class BaseRecorder:
                 cls_indices = np.where(labels == cls)[0]
                 cls_count = len(cls_indices)
                 if cls_count > 750:
-                    # 若类别样本过多，按比例间隔采样（非随机）
+                    # If class has too many samples, sample at fixed intervals (non-random)
                     step = cls_count // 750
                     sampled_idx = cls_indices[::step][:750]
                 else:
-                    # 若类别样本较少，则全部保留
+                    # If class has few samples, retain all
                     sampled_idx = cls_indices
 
                 selected_indices.extend(sampled_idx.tolist())
                 per_class_info[str(cls)] = len(sampled_idx)
 
-            # ---------- 控制总体上限 ----------
+            # ---------- Control overall upper limit ----------
             if len(selected_indices) > 10000:
-                # 若均衡采样后仍超出最大限制，则等间隔全局下采样
+                # If still exceeds limit after balanced sampling, downsample globally at fixed intervals
                 step = len(selected_indices) // 10000
                 selected_indices = selected_indices[::step][:10000]
 
-            # ---------- 提取最终数据 ----------
+            # ---------- Extract final data ----------
             features_sub = features[selected_indices]
             labels_sub = labels[selected_indices]
 
-            # ---------- 写入 TensorBoard ----------
+            # ---------- Write to TensorBoard ----------
             self.tensorboard.add_embedding(
                 mat=features_sub,
                 metadata=[str(l) for l in labels_sub],
@@ -393,53 +396,53 @@ class BaseRecorder:
             )
 
         except Exception as e:
-            self.logger.error(f"保存 t-SNE 嵌入失败 [{tag}]: {e}")
+            self.logger.error(f"Failed to save t-SNE embedding [{tag}]: {e}")
 
     def metric_tensorboard(self, title: str, epoch: int, metrics):
         """
-        将评估结果记录到 TensorBoard。
+        Record evaluation results to TensorBoard.
 
         Args:
-            title (str): 用于区分不同评估任务的标题，例如"Train"或"Val"。
-            epoch (int): 当前训练轮次。
-            metrics (dict): 由 compute_metrics_values 返回的评估结果字典。
+            title (str): Title to distinguish different evaluation tasks, e.g., "Train" or "Val".
+            epoch (int): Current training epoch.
+            metrics (dict): Evaluation result dictionary returned by compute_metrics.
         """
-        # 记录整体评估指标
+        # Record overall evaluation metrics
         self.tensorboard.add_scalar(f'{title}/Overall Accuracy', metrics['oa'], epoch)
         self.tensorboard.add_scalar(f'{title}/Mean Accuracy', metrics['mean_acc'], epoch)
         self.tensorboard.add_scalar(f'{title}/Mean IoU', metrics['mean_iou'], epoch)
         self.tensorboard.add_scalar(f'{title}/Macro F1', metrics['mean_f1'], epoch)
 
-        # 提取每类指标信息
-        class_names = list(metrics['class_info'].keys())  # 类别名或ID字符串列表
+        # Extract per-class metric information
+        class_names = list(metrics['class_info'].keys())  # List of class names or ID strings
         id_confusion = [metrics['class_info'][k]['id_confusion'] for k in class_names]
-        ious = [metrics['class_info'][k]['iou'] for k in class_names]  # 每类IoU
-        f1s = [metrics['class_info'][k]['f1'] for k in class_names]  # 每类F1
+        ious = [metrics['class_info'][k]['iou'] for k in class_names]  # Per-class IoU
+        f1s = [metrics['class_info'][k]['f1'] for k in class_names]  # Per-class F1
 
-        # 合并所有类别的IoU和F1曲线在同一图中
+        # Merge all class IoU and F1 curves in the same plot
         iou_dict = {k: v for k, v in zip(class_names, ious)}
         f1_dict = {k: v for k, v in zip(class_names, f1s)}
         self.tensorboard.add_scalars(f'{title}/Per-IoU', iou_dict, epoch)
         self.tensorboard.add_scalars(f'{title}/Per-F1', f1_dict, epoch)
 
-        # 真值标签下的预测标签分布
+        # Predicted label distribution under ground truth labels
         row_sums = metrics['confusion_matrix'].sum(axis=1, keepdims=True)
         gt_perPreds = np.divide(metrics['confusion_matrix'], row_sums, where=row_sums != 0) * 100
         gt_perPreds = np.round(gt_perPreds, 2)
 
-        # 预测标签下的真值标签分布
+        # Ground truth label distribution under predicted labels
         col_sums = metrics['confusion_matrix'].sum(axis=0, keepdims=True)
         preds_perGT = np.divide(metrics['confusion_matrix'], col_sums, where=col_sums != 0) * 100
         preds_perGT = np.round(preds_perGT, 2)
-
-        # 为每个类别添加真值标签下的预测标签分布
+        
+        # Add predicted label distribution under each ground truth class
         for i, class_name in enumerate(class_names):
             gt_pred_dict = {f'pred-{pred_class}': gt_perPreds[i, j]
                             for j, pred_class in enumerate(class_names)}
             self.tensorboard.add_scalars(
                 f'{title}_PredDist/gt-{class_name}', gt_pred_dict, epoch)
 
-        # 为每个类别添加预测标签下的真值标签分布
+        # Add ground truth label distribution under each predicted class
         for i, class_name in enumerate(class_names):
             pred_gt_dict = {f'gt-{gt_class}': preds_perGT[j, i]
                             for j, gt_class in enumerate(class_names)}
@@ -467,42 +470,42 @@ class PointBasePipeline:
     @property
     def dataset_cls(self):
         if self._dataset_cls is None:
-            raise NotImplementedError('请进行 dataset_init()')
+            raise NotImplementedError('Please implement dataset_init()')
         else:
             return self._dataset_cls
 
     @property
     def model_cls(self):
         if self._model_cls is None:
-            raise NotImplementedError('请进行 model_init()')
+            raise NotImplementedError('Please implement model_init()')
         else:
             return self._model_cls
 
     @property
     def datasets(self):
         if self._datasets is None:
-            raise NotImplementedError('请进行 dataset_create()')
+            raise NotImplementedError('Please implement dataset_create()')
         else:
             return self._datasets
 
     @property
     def dataloaders(self):
         if self._dataloaders is None:
-            raise NotImplementedError('请进行 dataloader_create()')
+            raise NotImplementedError('Please implement dataloader_create()')
         else:
             return self._dataloaders
 
     @property
     def optimizer(self):
         if self._optimizer is None:
-            raise NotImplementedError('请进行 optimizer_create()')
+            raise NotImplementedError('Please implement optimizer_create()')
         else:
             return self._optimizer
 
     @property
     def scheduler(self):
         if self._scheduler is None:
-            warnings.warn('若使用scheduler，需进行 scheduler_create()，否则忽略此警告')
+            warnings.warn('If using scheduler, please implement scheduler_create(); otherwise, this warning can be ignored')
             return None
         else:
             return self._scheduler
@@ -510,49 +513,70 @@ class PointBasePipeline:
     @property
     def criterion(self):
         if self._criterion is None:
-            raise NotImplementedError('请进行 criterion_create()')
+            raise NotImplementedError('Please implement criterion_create()')
         return self._criterion
 
-    @staticmethod  # 定义为静态方法
+    @staticmethod  # Defined as static method
     def path_verification(path):
         """
-        检查指定路径是否存在，如不存在则抛出异常。
+        Check if specified path exists; raise exception if not.
+        
         Args:
-            path: str，文件夹路径
+            path: str, folder path.
+            
         Returns:
-            path: str，合法路径
+            path: str, validated path.
+            
         Raises:
-            FileNotFoundError: 如果路径不存在
+            FileNotFoundError: If path does not exist.
+            NotADirectoryError: If path is not a directory.
         """
         if not os.path.exists(path):
-            raise FileNotFoundError(f"指定的路径不存在: {path}")
+            raise FileNotFoundError(f"Specified path does not exist: {path}")
         if not os.path.isdir(path):
-            raise NotADirectoryError(f"指定的路径不是目录: {path}")
+            raise NotADirectoryError(f"Specified path is not a directory: {path}")
         return path
 
     def model_init(self, model_cls):
         """
-        模型不一定只有一个，所以不直接实例化
+        Model may not be unique, so do not instantiate directly.
 
-        :param model_cls: 优化器类 (如 torch.optim.Adam)
+        :param model_cls: Model class (e.g., custom neural network class).
         """
         self._model_cls = model_cls
 
     def dataset_init(self, dataset_cls):
+        """
+        Initialize dataset class reference.
+        
+        :param dataset_cls: Dataset class (e.g., torch.utils.data.Dataset subclass).
+        """
         self._dataset_cls = dataset_cls
 
     def optimizer_create(self, optimizer_cls, model_params, **kwargs):
         """
-        初始化优化器
+        Initialize optimizer.
 
-        :param optimizer_cls: 优化器类 (如 torch.optim.Adam)
-        :param model_params: 模型参数 (model.parameters())
-        :param kwargs: 优化器关键字参数
+        :param optimizer_cls: Optimizer class (e.g., torch.optim.Adam).
+        :param model_params: Model parameters (model.parameters()).
+        :param kwargs: Optimizer keyword arguments.
         """
         self._optimizer = optimizer_cls(model_params, **kwargs)
 
     def scheduler_create(self, scheduler_cls, **kwargs):
+        """
+        Initialize learning rate scheduler.
+        
+        :param scheduler_cls: Scheduler class (e.g., torch.optim.lr_scheduler.StepLR).
+        :param kwargs: Scheduler keyword arguments.
+        """
         self._scheduler = scheduler_cls(self.optimizer, **kwargs)
 
     def criterion_create(self, criterion_cls, **kwargs):
+        """
+        Initialize loss function.
+        
+        :param criterion_cls: Loss function class (e.g., torch.nn.CrossEntropyLoss).
+        :param kwargs: Loss function keyword arguments.
+        """
         self._criterion = criterion_cls(**kwargs).cuda()
