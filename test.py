@@ -1,4 +1,4 @@
-# @Note    : MinkowskiNet的基础训练的模型/The basic training model of MinkowskiNet
+# @Note    : The fundamental architecture of MinkowskiNet
 import os
 
 import torch
