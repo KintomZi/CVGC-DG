@@ -12,30 +12,16 @@ class MinkowskiDataset(GeneralDataset):
         self.config = config
 
     def data_load(self, filePath: str, center_type: int = 2):
-        """
-        加载npy文件
-
-        Args:
-            filePath : str, 文件路径
-            center_type : int, 选择坐标原点类型
-                - 0: 三维的坐标均值中心
-                - 1：二维平面的均值中心，z轴不改变
-                - 2：1m/bin中点数量<1000的首个bin中心
-
-        Returns:
-            Dict
-
-        """
         try:
             npy_data = np.load(filePath)
-            # 确认加载后的数据处理逻辑是否耗时
+            # Note: Evaluate whether post-loading processing logic is time-consuming
         except Exception as e:
-            print(f"加载文件失败: {filePath}, 错误: {e}")
+            print(f"Failed to load file: {filePath}, Error: {e}")
             raise
         coords = np.vstack((npy_data['x'], npy_data['y'], npy_data['z'])).T.astype(np.float32)
         point_id = np.arange(coords.shape[0])
         #########################################################
-        # 坐标处理
+        # Coordinate processing
         try:
             coords_init = pcMethods.coords_initialize(coords, center_type)
         except Exception as e:
@@ -43,13 +29,13 @@ class MinkowskiDataset(GeneralDataset):
             raise e
 
         #########################################################
-        # 特征处理,在体素化之前才决定是否加载coords
+        # Feature processing: decide whether to load coords before voxelization
         # colors = np.vstack((npy_data['red'], npy_data['green'], npy_data['blue'])).T
         # features = pcMethods.feature_initialize(colors)
-        features = np.array([])
+        features = np.array([])  # Placeholder: features to be initialized later
 
         #########################################################
-        # 真值处理
+        # Ground truth label processing
         ground_truth = np.array(npy_data['label'])
         # if np.any(ground_truth == 0):
         #     tempH = coords_init[ground_truth == 0][:, 2].mean(axis=0)
@@ -61,7 +47,7 @@ class MinkowskiDataset(GeneralDataset):
         #                                                      self.config.model.output_class_dim)
 
         #########################################################
-        # 其他
+        # Other fields
 
         return {
             'point_id': point_id,
@@ -74,8 +60,10 @@ class MinkowskiDataset(GeneralDataset):
     def voxelize_data(self, coords, features, voxel_size, data_dict):
         """Minkowski voxelization"""
         if features.shape[0] == 0:
+            # If no features provided, use coordinates as default features
             features = pcMethods.feature_initialize(coords)
         else:
+            # Concatenate coordinates with provided features
             features = pcMethods.feature_initialize(coords, features)
 
         coordsV, featsV, unique_map, inverse_map = pcMethods.voxelize(coords, features, voxel_size)
@@ -97,12 +85,12 @@ class MinkowskiDataset(GeneralDataset):
         # data_ori['mix_id'] = np.full((data_ori['coords'].shape[0],), 0, dtype=int)
 
         if self.transforms:
-            # 普通增强：旋转、平移、拉伸
+            # Standard augmentation: rotation, translation, scaling
             data_ori['coordsTrans'] = pcMethods.augs_xyz(data_ori['coords'], from_paper=args_dataset.aug_parameter)
         else:
             data_ori['coordsTrans'] = data_ori['coords']
 
-        # 体素化处理
+        # Voxelization processing
         data_ori = self.voxelize_data(data_ori['coordsTrans'], data_ori['features'], args_dataset.voxel_size, data_ori)
 
         data_result['origin'] = {
@@ -125,12 +113,10 @@ class MinkowskiDataset(GeneralDataset):
         # data_ori['mix_id'] = np.full((data_ori['coords'].shape[0],), 0, dtype=int)
 
         if self.transforms:
-            # 普通增强：旋转、平移、拉伸
             data_ori['coordsTrans'] = pcMethods.augs_xyz(data_ori['coords'], from_paper=args_dataset.aug_parameter)
         else:
             data_ori['coordsTrans'] = data_ori['coords']
 
-        # 体素化处理
         data_ori = self.voxelize_data(data_ori['coordsTrans'], data_ori['features'], args_dataset.voxel_size, data_ori)
 
         data_result['eval'] = {
@@ -150,21 +136,38 @@ class MinkowskiDataset(GeneralDataset):
         elif self.mode == 'val' or self.mode == 'test':
             data_result = self.mode_eval(index)
         else:
-            raise ValueError(f"无效的 mode: {self.mode}, 只能输入'train' or 'val' or 'test'.")
+            raise ValueError(f"Invalid mode: {self.mode}, expected 'train', 'val', or 'test'.")
 
         return data_result, index
 
 
 class collate_fn_mink:
+    """
+    Custom collate function for batching MinkowskiEngine sparse tensors.
+    
+    Handles concatenation of sparse coordinates, feature aggregation, and index offsetting
+    to support batched sparse convolution operations.
+    """
     def __call__(self, data_list):
-        # 解压数据列表，得到每个样本的data_all字典和索引
+        """
+        Collate a list of samples into a batch dictionary compatible with MinkowskiEngine.
+
+        Args:
+            data_list (list): List of tuples (data_dict, index) from dataset.__getitem__.
+
+        Returns:
+            tuple:
+                - merged_dict (dict): Batched data dictionary with concatenated tensors.
+                - indices (list): List of original sample indices.
+        """
+        # Unpack data list to separate data dictionaries and indices
         data_all_list, indices = zip(*data_list)
 
-        # 收集所有存在的键（如'labeled'、'unlabeled'、'mix'）
+        # Collect all existing keys (e.g., 'origin', 'mix', etc.)
         type_key_all = data_all_list[0].keys()
         # all_keys = set(key for data in data_all_list for key in data.keys())
 
-        # 初始化批次存储结构
+        # Initialize batch storage structure
         batch_dict = {
             type_key: {property_key: []
                        for property_key in data_all_list[0][type_key].keys()}
@@ -173,47 +176,47 @@ class collate_fn_mink:
         for type_key in type_key_all:
             batch_dict[type_key]['batch_id'] = []
 
-        # 计算偏移量
-        inverse_offset = {}  # 原始点偏移量
-        unique_offsets = {}  # 唯一体素偏移量
+        # Compute offsets for index remapping across batched samples
+        inverse_offset = {}  # Offset for original point indices
+        unique_offsets = {}  # Offset for unique voxel indices
         for type_key in type_key_all:
-            # 计算每个样本的原始点数偏移量
+            # Compute cumulative offset for original point counts per sample
             inverse_counts = [len(data_all[type_key]['unique_map']) for data_all in data_all_list]
             inverse_offset[type_key] = np.cumsum([0] + inverse_counts[:-1])
 
-            # 计算每个样本的唯一体素数偏移量
+            # Compute cumulative offset for unique voxel counts per sample
             unique_counts = [len(data_all[type_key]['inverse_map']) for data_all in data_all_list]
             unique_offsets[type_key] = np.cumsum([0] + unique_counts[:-1])
 
-        # 遍历每个样本
+        # Iterate through each sample in the batch
         for batch_id, data_all in enumerate(data_all_list):
-            # 遍历每个数据版本（如basic/gsm）
+            # Iterate through each data variant (e.g., 'origin', 'mix')
             for type_key in data_all.keys():
                 item = data_all[type_key]
 
-                # 添加batch维度到坐标
+                # Add batch dimension to coordinates for MinkowskiEngine compatibility
                 batch_coords = np.hstack([
                     np.full((item['coords'].shape[0], 1), batch_id),
                     item['coords']
                 ])
 
-                # 收集数据到对应版本
+                # Collect data into corresponding batch slots
                 temp_batch_id = np.full((item['ground_truth'].shape[0],), batch_id)
                 batch_dict[type_key]['batch_id'].append(torch.from_numpy(temp_batch_id).long())
                 batch_dict[type_key]['point_id'].append(torch.from_numpy(item['point_id']).long())
                 batch_dict[type_key]['coords'].append(torch.from_numpy(batch_coords).int())
                 batch_dict[type_key]['features'].append(torch.from_numpy(item['features']).float())
                 batch_dict[type_key]['ground_truth'].append(torch.from_numpy(item['ground_truth']).long())
-                # 调整 unique_map 索引
+                # Adjust unique_map indices with cumulative offset for batch concatenation
                 batch_dict[type_key]['unique_map'].append(
                     item['unique_map'].long() + unique_offsets[type_key][batch_id])
-                # 调整 inverse_map 索引
+                # Adjust inverse_map indices with cumulative offset for batch concatenation
                 batch_dict[type_key]['inverse_map'].append(
                     item['inverse_map'].long() + inverse_offset[type_key][batch_id])
                 ############################
-                # 可添加
+                # Optional fields (conditionally added)
                 if 'mix_id' in batch_dict[type_key].keys():
-                    # 存在混合型场景时使用，例如: 'Mix3D','PolarMix'等等
+                    # Used for mixed-scene augmentation strategies (e.g., 'Mix3D', 'PolarMix')
                     batch_dict[type_key]['mix_id'].append(torch.from_numpy(item['mix_id']).long())
                 if 'same2ori' in batch_dict[type_key].keys():
                     same2ori = np.vstack([np.full((item['same2ori'].shape[0],), batch_id), item['same2ori']]).T
@@ -235,7 +238,7 @@ class collate_fn_mink:
                 if 'weight_Occ' in batch_dict[type_key].keys():
                     batch_dict[type_key]['weight_Occ'].append(torch.from_numpy(item['weight_Occ']).float())
 
-        # 合并张量数据
+        # Concatenate tensors across all samples for each data variant
         merged_dict = {}
         for type_key in type_key_all:
             merged_dict[type_key] = {
@@ -248,9 +251,9 @@ class collate_fn_mink:
                 'inverse_map': torch.cat(batch_dict[type_key]['inverse_map'], dim=0),
             }
             ############################
-            # 可添加
+            # Optional fields (conditionally merged)
             if 'mix_id' in batch_dict[type_key].keys():
-                # 存在混合型场景时使用，例如: 'Mix3D','PolarMix'等等
+                # Used for mixed-scene augmentation strategies (e.g., 'Mix3D', 'PolarMix')
                 merged_dict[type_key]['mix_id'] = torch.cat(batch_dict[type_key]['mix_id'], dim=0)
             if 'same2aug' in batch_dict[type_key].keys():
                 merged_dict[type_key]['same2aug'] = torch.cat(batch_dict[type_key]['same2aug'], dim=0)
