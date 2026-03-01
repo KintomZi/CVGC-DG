@@ -7,7 +7,6 @@ Domain-generalized LiDAR semantic segmentation seeks to learn models from source
 
 # Note
 
-We provide the code for the testing portion of the experiment.
 
 <!--
 ## Testing
@@ -20,7 +19,7 @@ Here is test weight for H3D to PL3D&ISPRS. ([Google Drive](https://drive.google.
 # Cite
 Please cite our work if you find it useful.
 ```
-@misc{zhao2026crossviewdomaingeneralizationgeometric,
+@misc{zhao2026crossview,
       title={Cross-view Domain Generalization via Geometric Consistency for LiDAR Semantic Segmentation}, 
       author={Jindong Zhao and Yuan Gao and Yang Xia and Sheng Nie and Jun Yue and Weiwei Sun and Shaobo Xia},
       year={2026},
