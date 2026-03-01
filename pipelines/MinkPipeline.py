@@ -19,20 +19,20 @@ from pipelines.BasePipeline import PredictionProcessor as PredsProcessor
 
 class MinkowskiPipeline(PointBasePipeline):
     def __init__(self, config):
-        self.global_seed = config.env.seed  # 从配置中获取全局种子点
-        seed_everything(self.global_seed)  # 设置全局种子点
+        self.global_seed = config.env.seed  # Retrieve global seed from configuration
+        seed_everything(self.global_seed)  # Set global seed for reproducibility
         super().__init__(config)
         self.model = None
 
     def datasets_create(self):
         args_file = self.config.file
-        # 将数据集准备逻辑封装成独立函数，提高可读性
+        # Encapsulate dataset preparation logic into an independent function for better readability
         if self.dataset_cls is None:
             raise ValueError('')
         folder_train = self.path_verification(args_file.folder_train)
         folder_test = self.path_verification(args_file.folder_test)
 
-        list_train, list_val = paths_load_and_divide(folder_train, 1, '.npy')
+        list_train, list_val = paths_load_and_divide(folder_train, 0.85, '.npy')
 
         list_test, _ = paths_load_and_divide(folder_test, 1, '.npy')
 
@@ -56,8 +56,8 @@ class MinkowskiPipeline(PointBasePipeline):
                     'validation': args_model.val_batch_size,
                     'test': args_model.test_batch_size,
                 }[name],
-                shuffle=(name == 'train'),  # 仅训练集打乱数据
-                collate_fn=collate_fn_mink(),  # 确保 collate_fn 兼容所有数据集
+                shuffle=(name == 'train'),  # Shuffle data only for training set
+                collate_fn=collate_fn_mink(),  # Ensure collate_fn is compatible with all datasets
                 num_workers=args_env.num_workers,
                 pin_memory=False
             )
@@ -71,33 +71,33 @@ class MinkowskiPipeline(PointBasePipeline):
     def _record_config(self):
         conf_dict = OmegaConf.to_container(self.config, resolve=True)
         self.recorder.logger.info(json.dumps(conf_dict, indent=2))
-        self.recorder.logger.info(f"随机种子设置为{self.global_seed}，初始化数据集...")
-        self.recorder.logger.info(f'模型加载...\n{self.model}\n')
-        self.recorder.logger.info(f'优化器加载...\n{self.optimizer}\n')
+        self.recorder.logger.info(f"Random seed set to {self.global_seed}, initializing datasets...")
+        self.recorder.logger.info(f'Model loaded...\n{self.model}\n')
+        self.recorder.logger.info(f'Optimizer loaded...\n{self.optimizer}\n')
 
         if self.scheduler is None:
-            self.recorder.logger.warning(f'调度器未设置参数\n')
+            self.recorder.logger.warning(f'Scheduler parameters not set\n')
         else:
             scheduler_config = {k: str(v) for k, v in self.scheduler.__dict__.items()}
-            self.recorder.logger.info(f'调度器加载...\n{json.dumps(scheduler_config, indent=2)}\n')
+            self.recorder.logger.info(f'Scheduler loaded...\n{json.dumps(scheduler_config, indent=2)}\n')
 
         loss_config = {k: str(v) for k, v in self.criterion.__dict__.items()}
-        self.recorder.logger.info(f'损失函数加载...\n{json.dumps(loss_config, indent=2)}\n')
+        self.recorder.logger.info(f'Loss function loaded...\n{json.dumps(loss_config, indent=2)}\n')
         self.recorder.logger.info(
             f'\ntensorboard --logdir={self.recorder.ckpt_folder}/tensorboard --bind_all --port 6007\n')
 
     def _load_weights(self, weights_pretrain, weights_eval=True):
         args_dataset = self.config.dataset
-        self.recorder.logger.info('加载已有训练权重...')
+        self.recorder.logger.info('Loading pre-trained weights...')
 
         if not os.path.exists(weights_pretrain):
-            raise ValueError('已有训练权重 不存在，请重新导入')
+            raise ValueError('Pre-trained weights do not exist, please re-import')
         else:
             self.model.load_state_dict(torch.load(weights_pretrain))
             metrics_pre, metrics_text_pre = None, None
-            # 是否进行权重评估
+            # Whether to evaluate the loaded weights
             if weights_eval:
-                _, preds_pre, gt_pre = self.eval_epoch(self.model, 'test')  # 使用临时模型进行验证
+                _, preds_pre, gt_pre = self.eval_epoch(self.model, 'test')  # Validate using temporary model
                 metrics_pre = PredsProcessor.compute_metrics(gt=gt_pre,
                                                              preds=preds_pre,
                                                              ignore_labels=args_dataset.ignore_label,
@@ -106,44 +106,44 @@ class MinkowskiPipeline(PointBasePipeline):
         return metrics_pre, metrics_text_pre
 
     def training_module(self, weights_pretrain=None, eval_pretrain=True, trainingVal=True, trainingTest=True):
-        seed_everything(self.global_seed)  # 确保训练开始时重置种子点
+        seed_everything(self.global_seed)  # Ensure seed is reset at training start
         train_start_timestamp = datetime.now()
 
         args_file = self.config.file
         args_model = self.config.model
         args_dataset = self.config.dataset
 
-        # 初始化日志文件
+        # Initialize log files
         self.recorder = BaseRecorder(self.path_verification(args_file.result_folder), train_start_timestamp)
         self._record_config()
 
-        # 基于已有权重进行训练
+        # Train based on pre-trained weights
         if weights_pretrain is not None:
             metrics_pre, metrics_text_pre = self._load_weights(weights_pretrain, weights_eval=eval_pretrain)
-            # 是否进行已有权重的评估
+            # Whether to evaluate pre-trained weights
             if eval_pretrain:
                 self.recorder.logger.info(f'{metrics_text_pre}')
                 self.recorder.metric_tensorboard('Test', 0, metrics_pre)
 
         ####################################################################################################################
-        self.recorder.logger.info('开始训练...')
-        iter_counter = 0  # 迭代次数计数器
+        self.recorder.logger.info('Starting training...')
+        iter_counter = 0  # Iteration counter
         best_mIoU = 0
         best_metric_text = ''
-        for epoch in range(1, args_model.train_epoch + 1):  # 训练过程进行多个epoch
+        for epoch in range(1, args_model.train_epoch + 1):  # Training process spans multiple epochs
 
             train_start = time.time()
             loss_train, iter_counter = self.training_epoch(epoch, iter_counter)
             train_end = time.time()
 
-            # 每个epoch记录学习率
+            # Record learning rate at each epoch
             self.recorder.tensorboard.add_scalar('Learning Rate/Epoch', self.optimizer.param_groups[0]['lr'], epoch)
 
             epoch_info = (f'Epoch: {epoch:4}/{args_model.train_epoch}  '
                           + f'lr: {self.optimizer.param_groups[0]["lr"]:.3e}  '
                           + f"TrainLoss({train_end - train_start:.2f}s): {loss_train:.10f}  ")
 
-            # 是否进行训练时验证
+            # Whether to perform validation during training
             if trainingVal:
                 val_start = time.time()
                 loss_val, preds_val, gt_val = self.eval_epoch(self.model, 'val')
@@ -157,20 +157,20 @@ class MinkowskiPipeline(PointBasePipeline):
                 self.recorder.metric_tensorboard('Val', epoch, metrics_val)
 
                 epoch_info += f"ValLoss({val_end - val_start:.2f}s): {loss_val:.10f}  "
-                # 记录训练集和验证集的损失
+                # Record losses for training and validation sets
                 self.recorder.tensorboard.add_scalars('Loss/Epoch', {"Train": loss_train, "Val": loss_val},
                                                       epoch)
             else:
-                # 记录训练集和验证集的损失
+                # Record training set loss
                 self.recorder.tensorboard.add_scalar('Loss/Epoch/Train', loss_train, epoch)
 
             self.recorder.logger.info(epoch_info)
 
-            # 权重保存与测试
+            # Weight saving and testing
             if epoch % args_model.test_interval == 0 or epoch == args_model.train_epoch:
                 pth_save_path = os.path.join(self.recorder.ckpt_folder, f"trained_{epoch}.pth")
-                torch.save(self.model.state_dict(), pth_save_path)  # 保存模型权重
-                # 权重测试
+                torch.save(self.model.state_dict(), pth_save_path)  # Save model weights
+                # Weight testing
                 if trainingTest:
                     loss_test, preds_test, gt_test = self.eval_epoch(self.model, 'test')
 
@@ -187,32 +187,32 @@ class MinkowskiPipeline(PointBasePipeline):
                         best_metric_text = f'Test Epoch: {epoch}\n' + metrics_text_test
 
                     self.recorder.logger.info(f'Test Epoch: {epoch}\n{metrics_text_test}')
-                torch.cuda.empty_cache()  # 释放显存
+                torch.cuda.empty_cache()  # Release GPU memory
 
         train_end_timestamp = datetime.now()
 
         self.recorder.tensorboard.close()
-        self.recorder.logger.info(f'训练结束 总耗时：{train_end_timestamp - train_start_timestamp}')
+        self.recorder.logger.info(f'Training finished. Total elapsed time: {train_end_timestamp - train_start_timestamp}')
         self.recorder.logger.info(f'\n>>>Best MeanIOU<<<')
         self.recorder.logger.info(best_metric_text)
 
-    def test_module(self, weight_train, test_times=1):
+   def test_module(self, weight_train, test_times=1):
         args_model = self.config.model
         args_dataset = self.config.dataset
         model = self.model_cls(args_model.input_features_dim, args_model.output_class_dim)
         if not os.path.exists(weight_train):
-            raise ValueError('请导入训练模型权重以作测试')
+            raise ValueError('Please import trained model weights for testing')
         else:
             model.load_state_dict(torch.load(weight_train))
 
-        seeds = [self.global_seed]  # 始终包含全局种子点
+        seeds = [self.global_seed]  # Always include the global seed
         if test_times > 1:
             seeds.extend([random.randint(0, 10000) for _ in range(test_times - 1)])
         elif test_times < 1:
-            raise ValueError('test_times 必须为正整数')
+            raise ValueError('test_times must be a positive integer')
 
         for seed in seeds:
-            seed_everything(seed)  # 为每次测试设置种子点
+            seed_everything(seed)  # Set seed for each test run
             loss_test, preds_test, gt_test = self.eval_epoch(model, 'test')
 
             metrics_test = PredsProcessor.compute_metrics(gt=gt_test,
@@ -223,54 +223,54 @@ class MinkowskiPipeline(PointBasePipeline):
             print(f'Seed: {seed}')
             print(f'{metrics_text_test}')
 
-    def training_epoch(self, epoch, iter_num):
+   def training_epoch(self, epoch, iter_num):
         args_model = self.config.model
 
-        self.model.train()  # 设置模型为训练模式
+        self.model.train()  # Set model to training mode
 
-        accum_iter_loss = 0  # 初始化 累积损失
-        iter_sub_counter = iter_num  # 初始化 累积迭代(iteration)次数
-        # tqdm 包装 train_loader 并显示进度
+        accum_iter_loss = 0  # Initialize accumulated loss
+        iter_sub_counter = iter_num  # Initialize accumulated iteration counter
+        # Wrap train_loader with tqdm and display progress
         with tqdm(self.dataloaders['train'], desc=f'Training {epoch}/{args_model.train_epoch}',
-                  dynamic_ncols=True,  # 自适应终端宽度
-                  leave=True,  # 训练结束后 是否 保留进度条
+                  dynamic_ncols=True,  # Adapt to terminal width
+                  leave=True,  # Whether to keep progress bar after training completes
                   ) as tepoch:
             for batch_idx, data_zip in enumerate(tepoch):
-                self.optimizer.zero_grad()  # 清零梯度
+                self.optimizer.zero_grad()  # Zero out gradients
                 data_all, indices = data_zip
 
                 loss_ori, _other = self.training_step(data_all['origin'], self.model)
 
                 loss_total = loss_ori['sem']
 
-                loss_total.backward()  # 反向传播
-                self.optimizer.step()  # 更新模型参数
+                loss_total.backward()  # Backpropagation
+                self.optimizer.step()  # Update model parameters
 
-                # 累加损失和迭代次数
-                accum_iter_loss += loss_total.item()  # 累计当前iter损失
-                iter_sub_counter += 1  # 总批次数记录
+                # Accumulate loss and iteration count
+                accum_iter_loss += loss_total.item()  # Accumulate current iteration loss
+                iter_sub_counter += 1  # Record total batch count
 
-                # 每个 迭代 记录学习率和损失
+                # Record learning rate and loss at each iteration
                 self.recorder.tensorboard.add_scalar('Learning Rate/Iteration', self.optimizer.param_groups[0]['lr'],
                                                      iter_sub_counter)
                 self.recorder.tensorboard.add_scalars('Loss/Train/Iteration',
                                                       {"loss_sup": loss_ori['sem'].item(),
                                                        "loss_total": loss_total.item()}, iter_sub_counter)
-                # 更新进度条显示
+                # Update progress bar display
                 tepoch.set_postfix(loss=loss_total.item(), lr=self.optimizer.param_groups[0]["lr"])
-                # self.scheduler.step()  # 每个迭代更新学习率
-        # self.scheduler.step()  # 每个epoch更新学习率
+                # self.scheduler.step()  # Update learning rate at each iteration
+        # self.scheduler.step()  # Update learning rate at each epoch
 
         avg_loss = accum_iter_loss / (iter_sub_counter - iter_num)
         return avg_loss, iter_sub_counter
 
     def eval_epoch(self, model, mode):
         args_model = self.config.model
-        torch.cuda.empty_cache()  # 清空前轮显存缓存
-        torch.cuda.synchronize()  # 确保前一轮训练所有GPU任务完成
+        torch.cuda.empty_cache()  # Clear GPU memory cache from previous round
+        torch.cuda.synchronize()  # Ensure all GPU tasks from previous round are completed
         temp_model = self.model_cls(args_model.input_features_dim, args_model.output_class_dim).to(self.device)
         temp_model.load_state_dict(model.state_dict())
-        temp_model.eval()  # 切换到评估模式
+        temp_model.eval()  # Switch to evaluation mode
 
         if mode == 'test':
             eval_loader = self.dataloaders['test']
@@ -282,7 +282,7 @@ class MinkowskiPipeline(PointBasePipeline):
         val_loss = 0.0
         all_preds, all_gt = [], []
 
-        # 禁用梯度计算以节省内存和计算资源
+        # Disable gradient computation to save memory and computational resources
         with torch.no_grad():
             for datas in eval_loader:
                 gt, pred, loss = self.eval_step(datas, temp_model)
@@ -291,20 +291,20 @@ class MinkowskiPipeline(PointBasePipeline):
                 all_gt.append(gt)
                 val_loss += loss.item()
 
-        # 处理空的验证集
+        # Handle empty validation set
         if not all_preds or not all_gt:
-            raise ValueError('标签数组里面没有值')
+            raise ValueError('No values in label array')
 
-        # 合并所有预测结果和标签，移到CPU并转换为numpy数组
+        # Concatenate all predictions and labels, move to CPU and convert to numpy arrays
         all_preds = torch.cat(all_preds).cpu().numpy()
         all_gt = torch.cat(all_gt).cpu().numpy()
-        # 计算平均验证损失
+        # Calculate average validation loss
         avg_val_loss = val_loss / len(eval_loader)
 
         del temp_model
         gc.collect()
-        torch.cuda.empty_cache()  # 清除当前评估残留缓存
-        torch.cuda.synchronize()  # 确保全部释放同步完成
+        torch.cuda.empty_cache()  # Clear residual cache from current evaluation
+        torch.cuda.synchronize()  # Ensure all releases are synchronized and completed
 
         return avg_val_loss, all_preds, all_gt
 
@@ -318,16 +318,16 @@ class MinkowskiPipeline(PointBasePipeline):
         inverse_map = datas_train['inverse_map']
 
         tensor_field = ME.TensorField(features=features, coordinates=coords)
-        sparse_tensor = tensor_field.sparse()  # 稀疏张量输入
+        sparse_tensor = tensor_field.sparse()  # Sparse tensor input
 
-        preds_logits, _, _ = model(sparse_tensor)  # 模型前向传播
-        out_preds = preds_logits.slice(tensor_field).F  # 输出恢复为稠密点特征
+        preds_logits, _, _ = model(sparse_tensor)  # Model forward pass
+        out_preds = preds_logits.slice(tensor_field).F  # Restore output to dense point features
 
         del tensor_field, sparse_tensor, preds_logits
 
         gt_downSample = ground_truth[unique_map]
 
-        # 过滤被忽略标签
+        # Filter out ignored labels
         mask_complete = ~np.isin(ground_truth.cpu().numpy(), list(self.config.dataset.ignore_label))
         mask_complete = torch.from_numpy(mask_complete).to(self.device)
         mask_downSample = mask_complete[unique_map]
@@ -337,7 +337,8 @@ class MinkowskiPipeline(PointBasePipeline):
         }
         other_dict = {}
 
-        # 逆射到完整点云的真值(筛去忽视点)，特征(筛去忽视点)，其他元素
+        # Map back to complete point cloud: ground truth (excluding ignored points), 
+        # features (excluding ignored points), and other elements
         return loss_dict, other_dict
 
     def eval_step(self, datas_eval, model):
@@ -351,29 +352,30 @@ class MinkowskiPipeline(PointBasePipeline):
         unique_map = single_data['unique_map'].to(self.device)
         inverse_map = single_data['inverse_map'].to(self.device)
 
-        # 构造 Minkowski Engine 的 TensorField（稀疏输入）
+        # Construct Minkowski Engine TensorField (sparse input)
         tensor_field = ME.TensorField(features=features, coordinates=coords)
-        sparse_tensor = tensor_field.sparse()  # 稀疏张量输入
+        sparse_tensor = tensor_field.sparse()  # Sparse tensor input
 
-        preds_logits, _, _ = model(sparse_tensor)  # 模型前向传播
-        out_preds = preds_logits.slice(tensor_field).F  # 输出恢复为稠密点特征
+        preds_logits, _, _ = model(sparse_tensor)  # Model forward pass
+        out_preds = preds_logits.slice(tensor_field).F  # Restore output to dense point features
 
         del tensor_field, sparse_tensor, preds_logits
 
-        # 以概率最大的为预测标签
+        # Predict label with highest probability
         probs = F.softmax(out_preds, dim=1)
         probs_C = probs[inverse_map]
 
         gt_downSample = ground_truth[unique_map]
 
-        # 过滤被忽略标签
+        # Filter out ignored labels
         mask_complete = ~np.isin(ground_truth.cpu().numpy(), list(self.config.dataset.ignore_label))
 
         mask_complete = torch.from_numpy(mask_complete).to(self.device)
         mask_downSample = mask_complete[unique_map]
 
-        # 计算损失
+        # Calculate loss
         loss = self.criterion(out_preds[mask_downSample], gt_downSample[mask_downSample])
 
-        # 逆射到完整点云的真值(筛去忽视点)，最大概率标签(筛去忽视点)，损失
+        # Map back to complete point cloud: ground truth (excluding ignored points), 
+        # predicted labels with highest probability (excluding ignored points), and loss
         return ground_truth[mask_complete], probs_C[mask_complete], loss
